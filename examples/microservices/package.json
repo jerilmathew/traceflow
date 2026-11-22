@@ -1,0 +1,24 @@
+{
+  "name": "@traceflow/example-microservices",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/run-all.ts",
+    "gateway": "tsx --import ./src/gateway/instrument.ts src/gateway/server.ts",
+    "users": "tsx --import ./src/users/instrument.ts src/users/server.ts",
+    "inventory": "tsx --import ./src/inventory/instrument.ts src/inventory/server.ts",
+    "scenarios": "tsx src/scripts/scenarios.ts",
+    "traffic": "tsx src/scripts/traffic.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@traceflow/telemetry": "workspace:*",
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

@@ -1,0 +1,29 @@
+# TraceFlow local infrastructure.
+#
+#   docker compose -f infrastructure/docker/docker-compose.yml up -d postgres
+#
+# Every port is bound to 127.0.0.1 so nothing is exposed on your LAN.
+name: traceflow
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: traceflow-postgres
+    environment:
+      POSTGRES_USER: traceflow
+      POSTGRES_PASSWORD: traceflow
+      POSTGRES_DB: traceflow
+    ports:
+      - '127.0.0.1:5544:5432'
+    volumes:
+      - traceflow-pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U traceflow -d traceflow']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  traceflow-pgdata:

@@ -1,0 +1,20 @@
+{
+  "name": "@traceflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/static": "^10.1.12",
+    "@traceflow/db": "workspace:*",
+    "@traceflow/shared": "workspace:*",
+    "fastify": "^5.12.8",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  }
+}
