@@ -96,6 +96,8 @@ export const spans = pgTable(
     /** OTLP StatusCode: 0 unset, 1 ok, 2 error. */
     statusCode: smallint('status_code').notNull(),
     statusMessage: text('status_message'),
+    /** Error classification computed once at ingest (see collector isErrorSpan). */
+    isError: boolean('is_error').notNull().default(false),
     attributes: jsonb('attributes').notNull().default({}),
     resourceAttributes: jsonb('resource_attributes').notNull().default({}),
     events: jsonb('events').notNull().default([]),

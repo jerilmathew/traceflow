@@ -363,9 +363,6 @@ importers:
       '@opentelemetry/exporter-trace-otlp-http':
         specifier: ^0.301.2
         version: 0.301.2(@opentelemetry/api@1.10.0)
-      '@opentelemetry/instrumentation':
-        specifier: ^0.301.2
-        version: 0.301.2(@opentelemetry/api@1.10.0)(supports-color@10.2.2)
       '@opentelemetry/instrumentation-http':
         specifier: ^0.301.2
         version: 0.301.2(@opentelemetry/api@1.10.0)(supports-color@10.2.2)

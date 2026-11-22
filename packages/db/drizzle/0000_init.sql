@@ -19,6 +19,7 @@ CREATE TABLE "spans" (
 	"duration_ms" double precision NOT NULL,
 	"status_code" smallint NOT NULL,
 	"status_message" text,
+	"is_error" boolean DEFAULT false NOT NULL,
 	"attributes" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"resource_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"events" jsonb DEFAULT '[]'::jsonb NOT NULL,

@@ -1,5 +1,5 @@
 {
-  "id": "a5105861-cebd-406d-a620-08d0fb35e371",
+  "id": "e19f908e-1a6e-4e4c-aa6a-439d73621aec",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -147,6 +147,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_error": {
+          "name": "is_error",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "attributes": {
           "name": "attributes",
