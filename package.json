@@ -16,11 +16,12 @@
     "db:reset": "pnpm --filter @traceflow/db reset",
     "db:generate": "pnpm --filter @traceflow/db generate",
     "dev": "concurrently -k -n collector,api,web -c magenta,blue,cyan \"pnpm --filter @traceflow/collector dev\" \"pnpm --filter @traceflow/api dev\" \"pnpm --filter @traceflow/web dev\"",
+    "start": "concurrently -k -n collector,api -c magenta,blue \"pnpm --filter @traceflow/collector start\" \"pnpm --filter @traceflow/api start\"",
     "demo:services": "pnpm --filter @traceflow/example-microservices start",
     "demo": "pnpm --filter @traceflow/example-microservices scenarios",
     "demo:traffic": "pnpm --filter @traceflow/example-microservices traffic",
     "build": "pnpm --filter @traceflow/web build",
-    "typecheck": "pnpm -r --parallel typecheck",
+    "typecheck": "pnpm -r --parallel typecheck && tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -28,7 +29,8 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:e2e": "playwright test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "screenshots": "tsx scripts/screenshots.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -22,6 +22,7 @@ import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace';
+import { StackTraceScrubber } from './scrub';
 import {
   ATTR_HTTP_REQUEST_METHOD,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
@@ -72,6 +73,7 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK {
     }),
     // Small batches and a short delay keep the demo feeling "live".
     spanProcessors: [
+      new StackTraceScrubber(),
       new BatchSpanProcessor({
         exporter,
         scheduledDelayMillis: 300,
@@ -215,3 +217,5 @@ export function failActiveSpan(error: Error): void {
   span.recordException(error);
   span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
 }
+
+export { StackTraceScrubber, scrubPaths } from './scrub';

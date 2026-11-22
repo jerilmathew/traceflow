@@ -1,6 +1,6 @@
 import type { APIRequestContext } from '@playwright/test';
 import { expect } from '@playwright/test';
-import type { TraceDetail } from '@traceflow/shared';
+import type { TraceDetail } from '../packages/shared/src/types';
 import { SCENARIOS, type Scenario } from '../examples/microservices/src/scripts/scenarios-def';
 
 export const GATEWAY = 'http://127.0.0.1:18101';
