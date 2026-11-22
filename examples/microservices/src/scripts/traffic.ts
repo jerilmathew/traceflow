@@ -38,7 +38,15 @@ const HEALTHY_SKUS = ['KB-001', 'MS-002'];
 function nextRequest() {
   const roll = random();
   const userId = USERS[Math.floor(random() * USERS.length)]!;
-  if (roll < 0.8) return { ...SCENARIOS[0]!, body: { userId, sku: HEALTHY_SKUS[Math.floor(random() * 2)]!, quantity: 1 + Math.floor(random() * 3) } };
+  if (roll < 0.8)
+    return {
+      ...SCENARIOS[0]!,
+      body: {
+        userId,
+        sku: HEALTHY_SKUS[Math.floor(random() * 2)]!,
+        quantity: 1 + Math.floor(random() * 3),
+      },
+    };
   if (roll < 0.93) return { ...SCENARIOS[1]!, body: { ...SCENARIOS[1]!.body, userId } };
   if (roll < 0.97) return SCENARIOS[2]!;
   // A suspended account: a handled 403, not a server error.

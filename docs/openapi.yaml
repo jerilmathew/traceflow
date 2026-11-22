@@ -17,30 +17,60 @@ paths:
     get:
       summary: Liveness and dependency status
       responses:
-        '200': { description: Healthy, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } } }
-        '503': { description: Database unreachable, content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } } }
+        '200':
+          {
+            description: Healthy,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } },
+          }
+        '503':
+          {
+            description: Database unreachable,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } },
+          }
   /api/overview:
     get:
       summary: Dashboard KPIs for a time window
       parameters: [{ $ref: '#/components/parameters/window' }]
       responses:
-        '200': { description: Overview, content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } } }
+        '200':
+          {
+            description: Overview,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Overview' } } },
+          }
         '400': { $ref: '#/components/responses/BadRequest' }
   /api/traces:
     get:
       summary: Search traces (paginated)
       parameters:
-        - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: 'Trace id prefix (hex) or text matched against root operation / service' }
-        - { name: service, in: query, schema: { type: string }, description: Only traces that include a span from this service }
+        - {
+            name: q,
+            in: query,
+            schema: { type: string, maxLength: 200 },
+            description: 'Trace id prefix (hex) or text matched against root operation / service',
+          }
+        - {
+            name: service,
+            in: query,
+            schema: { type: string },
+            description: Only traces that include a span from this service,
+          }
         - { name: status, in: query, schema: { type: string, enum: [ok, error, all] } }
         - { name: minDurationMs, in: query, schema: { type: number, minimum: 0 } }
         - { name: maxDurationMs, in: query, schema: { type: number, minimum: 0 } }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
-        - { name: sort, in: query, schema: { type: string, enum: [startTime, duration, spanCount], default: startTime } }
+        - {
+            name: sort,
+            in: query,
+            schema: { type: string, enum: [startTime, duration, spanCount], default: startTime },
+          }
         - { name: order, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
       responses:
         '200':
           description: One page of trace summaries
@@ -59,9 +89,18 @@ paths:
     get:
       summary: A trace with all of its spans
       parameters:
-        - { name: traceId, in: path, required: true, schema: { type: string, pattern: '^[0-9a-f]{32}$' } }
+        - {
+            name: traceId,
+            in: path,
+            required: true,
+            schema: { type: string, pattern: '^[0-9a-f]{32}$' },
+          }
       responses:
-        '200': { description: Trace detail, content: { application/json: { schema: { $ref: '#/components/schemas/TraceDetail' } } } }
+        '200':
+          {
+            description: Trace detail,
+            content: { application/json: { schema: { $ref: '#/components/schemas/TraceDetail' } } },
+          }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/services:
@@ -85,7 +124,11 @@ paths:
         - { name: name, in: path, required: true, schema: { type: string } }
         - { $ref: '#/components/parameters/window' }
       responses:
-        '200': { description: Service detail, content: { application/json: { schema: { type: object } } } }
+        '200':
+          {
+            description: Service detail,
+            content: { application/json: { schema: { type: object } } },
+          }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/dependencies:
     get:
@@ -110,7 +153,11 @@ paths:
         `resync` (refetch everything; notifications may have been missed).
         A `: ping` comment is sent every 15 seconds.
       responses:
-        '200': { description: Event stream, content: { text/event-stream: { schema: { type: string } } } }
+        '200':
+          {
+            description: Event stream,
+            content: { text/event-stream: { schema: { type: string } } },
+          }
         '503': { description: Too many live connections }
   /api/openapi.json:
     get:
@@ -168,7 +215,8 @@ components:
         spanCount: { type: integer }
         errorCount: { type: integer }
         services: { type: array, items: { type: string } }
-        hasRoot: { type: boolean, description: 'False until the span without a parent has been received' }
+        hasRoot:
+          { type: boolean, description: 'False until the span without a parent has been received' }
         orphanCount: { type: integer, description: 'Spans whose parent has not been received' }
         updatedAt: { type: string, format: date-time }
     Span:

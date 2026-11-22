@@ -15,6 +15,7 @@ export default async function setup(): Promise<void> {
     throw new Error(
       `Integration tests need PostgreSQL at ${TEST_DATABASE_URL.replace(/:[^:@/]+@/, ':***@')}. ` +
         `Start it with \`pnpm db:up\`. Cause: ${(error as Error).message}`,
+      { cause: error },
     );
   }
 }

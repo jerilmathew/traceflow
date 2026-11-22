@@ -1,4 +1,10 @@
-import type { Attributes, SpanDto, SpanKind, SpanStatusCode, TraceSummary } from '@traceflow/shared';
+import type {
+  Attributes,
+  SpanDto,
+  SpanKind,
+  SpanStatusCode,
+  TraceSummary,
+} from '@traceflow/shared';
 
 const KINDS: SpanKind[] = ['unspecified', 'internal', 'server', 'client', 'producer', 'consumer'];
 const STATUSES: SpanStatusCode[] = ['unset', 'ok', 'error'];
@@ -94,13 +100,21 @@ export function toSpanDto(row: SpanRowRaw, traceStart: bigint): SpanDto {
     attributes: row.attributes ?? {},
     resourceAttributes: row.resource_attributes ?? {},
     events: (row.events ?? []).map((e) => {
-      let offsetMs = 0;
+      let offsetMs: number;
       try {
-        offsetMs = e.timeUnixNano && e.timeUnixNano !== '0' ? nanosDiffMs(BigInt(e.timeUnixNano), traceStart) : 0;
+        offsetMs =
+          e.timeUnixNano && e.timeUnixNano !== '0'
+            ? nanosDiffMs(BigInt(e.timeUnixNano), traceStart)
+            : 0;
       } catch {
         offsetMs = 0;
       }
-      return { name: e.name, timeUnixNano: e.timeUnixNano, offsetMs, attributes: e.attributes ?? {} };
+      return {
+        name: e.name,
+        timeUnixNano: e.timeUnixNano,
+        offsetMs,
+        attributes: e.attributes ?? {},
+      };
     }),
     links: row.links ?? [],
     scopeName: row.scope_name,

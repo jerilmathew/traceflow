@@ -4,7 +4,13 @@ import { pingDb, type Sql } from '@traceflow/db';
 import { TIME_WINDOWS, isValidTraceId, type TimeWindow } from '@traceflow/shared';
 import { ApiError, notFound } from '../errors';
 import type { LiveHub } from '../live';
-import { getDependencyGraph, getOverview, getServiceDetail, listServices, windowRange } from '../queries/metrics';
+import {
+  getDependencyGraph,
+  getOverview,
+  getServiceDetail,
+  listServices,
+  windowRange,
+} from '../queries/metrics';
 import { getTraceDetail, searchTraces } from '../queries/traces';
 import { registerStream } from './stream';
 
@@ -22,8 +28,16 @@ const optionalDate = z
 
 const traceSearchSchema = z.object({
   q: z.string().trim().max(200).optional(),
-  service: z.string().trim().max(256).optional().transform((v) => v || undefined),
-  status: z.enum(['ok', 'error', 'all']).optional().transform((v) => (v === 'all' ? undefined : v)),
+  service: z
+    .string()
+    .trim()
+    .max(256)
+    .optional()
+    .transform((v) => v || undefined),
+  status: z
+    .enum(['ok', 'error', 'all'])
+    .optional()
+    .transform((v) => (v === 'all' ? undefined : v)),
   minDurationMs: optionalNumber,
   maxDurationMs: optionalNumber,
   from: optionalDate,

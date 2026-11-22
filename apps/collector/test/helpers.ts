@@ -18,7 +18,11 @@ export interface TestSpan {
   statusCode?: 0 | 1 | 2;
   statusMessage?: string;
   attributes?: Record<string, string | number | boolean>;
-  events?: Array<{ name: string; atMs: number; attributes?: Record<string, string | number | boolean> }>;
+  events?: Array<{
+    name: string;
+    atMs: number;
+    attributes?: Record<string, string | number | boolean>;
+  }>;
 }
 
 /** Fixed base time well inside any query window: "now" minus 1 minute, at ms precision. */
@@ -45,7 +49,11 @@ export function otlpSpan(s: TestSpan) {
     startTimeUnixNano: toNs(s.startMs),
     endTimeUnixNano: toNs(s.startMs + s.durationMs),
     attributes: kvs(s.attributes),
-    events: (s.events ?? []).map((e) => ({ name: e.name, timeUnixNano: toNs(e.atMs), attributes: kvs(e.attributes) })),
+    events: (s.events ?? []).map((e) => ({
+      name: e.name,
+      timeUnixNano: toNs(e.atMs),
+      attributes: kvs(e.attributes),
+    })),
     status: { code: s.statusCode ?? 0, ...(s.statusMessage ? { message: s.statusMessage } : {}) },
   };
 }

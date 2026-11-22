@@ -18,20 +18,36 @@ interface User {
 const USERS = new Map<string, User>(
   [
     { id: 'user-1001', name: 'Ada Lovelace', tier: 'plus', status: 'active', region: 'eu-west' },
-    { id: 'user-1002', name: 'Grace Hopper', tier: 'standard', status: 'active', region: 'us-east' },
+    {
+      id: 'user-1002',
+      name: 'Grace Hopper',
+      tier: 'standard',
+      status: 'active',
+      region: 'us-east',
+    },
     { id: 'user-1003', name: 'Alan Turing', tier: 'standard', status: 'active', region: 'eu-west' },
-    { id: 'user-2001', name: 'Edsger Dijkstra', tier: 'plus', status: 'suspended', region: 'eu-central' },
+    {
+      id: 'user-2001',
+      name: 'Edsger Dijkstra',
+      tier: 'plus',
+      status: 'suspended',
+      region: 'eu-central',
+    },
   ].map((u) => [u.id, u as User]),
 );
 
 const app = createServer('users-service');
 
 app.get<{ Params: { id: string } }>('/users/:id', async (request) => {
-  const user = await withSpan('user-directory.lookup', { 'user.id': request.params.id }, async (span) => {
-    const found = USERS.get(request.params.id);
-    span.setAttribute('user.found', Boolean(found));
-    return found;
-  });
+  const user = await withSpan(
+    'user-directory.lookup',
+    { 'user.id': request.params.id },
+    async (span) => {
+      const found = USERS.get(request.params.id);
+      span.setAttribute('user.found', Boolean(found));
+      return found;
+    },
+  );
   if (!user) throw new HttpError(404, `user ${request.params.id} not found`, 'user_not_found');
 
   // Derive purchase limits from the account tier (real computation, traced).

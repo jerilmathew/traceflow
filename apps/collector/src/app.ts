@@ -14,14 +14,28 @@ export interface CollectorOptions {
 }
 
 /** gRPC status codes used in OTLP/HTTP error bodies (google.rpc.Status). */
-const GRPC = { INVALID_ARGUMENT: 3, UNAVAILABLE: 14, UNIMPLEMENTED: 12, RESOURCE_EXHAUSTED: 8 } as const;
+const GRPC = {
+  INVALID_ARGUMENT: 3,
+  UNAVAILABLE: 14,
+  UNIMPLEMENTED: 12,
+  RESOURCE_EXHAUSTED: 8,
+} as const;
 
 /** Errors from postgres.js that mean "database unreachable / overloaded" → retryable. */
 function isTransientDbError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as { code?: string }).code ?? '';
   return (
-    ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'CONNECT_TIMEOUT', 'CONNECTION_CLOSED', 'CONNECTION_ENDED', 'CONNECTION_DESTROYED', 'EPIPE'].includes(code) ||
+    [
+      'ECONNREFUSED',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'CONNECT_TIMEOUT',
+      'CONNECTION_CLOSED',
+      'CONNECTION_ENDED',
+      'CONNECTION_DESTROYED',
+      'EPIPE',
+    ].includes(code) ||
     // 57P01 admin_shutdown, 57P03 cannot_connect_now, 53300 too_many_connections, 40P01 deadlock
     ['57P01', '57P03', '53300', '40P01'].includes(code)
   );
@@ -34,7 +48,9 @@ function byteLimit(limit: number): Transform {
     transform(chunk: Buffer, _enc, cb) {
       seen += chunk.length;
       if (seen > limit) {
-        const err = new Error(`request body exceeds ${limit} bytes after decompression`) as Error & {
+        const err = new Error(
+          `request body exceeds ${limit} bytes after decompression`,
+        ) as Error & {
           statusCode: number;
           code: string;
         };
@@ -75,7 +91,9 @@ export async function buildCollector(options: CollectorOptions): Promise<Fastify
     if (encoding === 'gzip') decoder = createGunzip();
     else if (encoding === 'deflate') decoder = createInflate();
     else {
-      const err = new Error(`unsupported content-encoding "${encoding}"`) as Error & { statusCode: number };
+      const err = new Error(`unsupported content-encoding "${encoding}"`) as Error & {
+        statusCode: number;
+      };
       err.statusCode = 415;
       throw err;
     }
@@ -93,20 +111,31 @@ export async function buildCollector(options: CollectorOptions): Promise<Fastify
   });
 
   // Protobuf is part of OTLP/HTTP but not implemented by this MVP: say so explicitly.
-  app.addContentTypeParser(['application/x-protobuf', 'application/protobuf'], (_req, _payload, done) => {
-    const err = new Error(
-      'OTLP/HTTP protobuf is not supported by TraceFlow yet; configure your exporter to send JSON (OTEL_EXPORTER_OTLP_PROTOCOL=http/json)',
-    ) as Error & { statusCode: number };
-    err.statusCode = 415;
-    done(err);
-  });
+  app.addContentTypeParser(
+    ['application/x-protobuf', 'application/protobuf'],
+    (_req, _payload, done) => {
+      const err = new Error(
+        'OTLP/HTTP protobuf is not supported by TraceFlow yet; configure your exporter to send JSON (OTEL_EXPORTER_OTLP_PROTOCOL=http/json)',
+      ) as Error & { statusCode: number };
+      err.statusCode = 415;
+      done(err);
+    },
+  );
 
   app.setErrorHandler((error: Error & { statusCode?: number; code?: string }, request, reply) => {
     const status = error.statusCode ?? 500;
     if (status >= 500) request.log.error({ err: error }, 'collector error');
     const grpc =
-      status === 415 ? GRPC.UNIMPLEMENTED : status === 413 ? GRPC.RESOURCE_EXHAUSTED : status < 500 ? GRPC.INVALID_ARGUMENT : GRPC.UNAVAILABLE;
-    void reply.status(status).send({ code: grpc, message: status >= 500 ? 'internal error' : error.message });
+      status === 415
+        ? GRPC.UNIMPLEMENTED
+        : status === 413
+          ? GRPC.RESOURCE_EXHAUSTED
+          : status < 500
+            ? GRPC.INVALID_ARGUMENT
+            : GRPC.UNAVAILABLE;
+    void reply
+      .status(status)
+      .send({ code: grpc, message: status >= 500 ? 'internal error' : error.message });
   });
 
   app.get('/', async () => ({
@@ -117,7 +146,9 @@ export async function buildCollector(options: CollectorOptions): Promise<Fastify
 
   app.get('/health', async (_req, reply) => {
     const db = await pingDb(options.sql);
-    return reply.status(db ? 200 : 503).send({ status: db ? 'ok' : 'degraded', database: db ? 'up' : 'down' });
+    return reply
+      .status(db ? 200 : 503)
+      .send({ status: db ? 'ok' : 'degraded', database: db ? 'up' : 'down' });
   });
 
   app.post('/v1/traces', async (request, reply) => {
@@ -153,20 +184,26 @@ export async function buildCollector(options: CollectorOptions): Promise<Fastify
       );
     } catch (error) {
       if (isTransientDbError(error)) {
-        request.log.warn({ code: (error as { code?: string }).code }, 'database unavailable; asking exporter to retry');
+        request.log.warn(
+          { code: (error as { code?: string }).code },
+          'database unavailable; asking exporter to retry',
+        );
         // 503 + Retry-After is a *retryable* response per the OTLP spec, so the
         // SDK keeps the batch and re-sends it with backoff instead of dropping it.
-        return reply
-          .status(503)
-          .header('retry-after', '5')
-          .send({ code: GRPC.UNAVAILABLE, message: 'storage temporarily unavailable, retry later' });
+        return reply.status(503).header('retry-after', '5').send({
+          code: GRPC.UNAVAILABLE,
+          message: 'storage temporarily unavailable, retry later',
+        });
       }
       throw error;
     }
 
     // ExportTraceServiceResponse. partialSuccess is only set when something was rejected.
     if (parsed.rejected.length > 0) {
-      const sample = parsed.rejected.slice(0, 5).map((r) => `span[${r.index}]: ${r.reason}`).join('; ');
+      const sample = parsed.rejected
+        .slice(0, 5)
+        .map((r) => `span[${r.index}]: ${r.reason}`)
+        .join('; ');
       return reply.status(200).send({
         partialSuccess: {
           rejectedSpans: String(parsed.rejected.length),

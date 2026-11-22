@@ -41,7 +41,10 @@ export interface IngestResult {
   traceIds: string[];
 }
 
-export async function ingestSpans(sql: Sql, spans: readonly NormalizedSpan[]): Promise<IngestResult> {
+export async function ingestSpans(
+  sql: Sql,
+  spans: readonly NormalizedSpan[],
+): Promise<IngestResult> {
   // De-duplicate within the batch first; the database handles cross-batch duplicates.
   const unique = new Map<string, NormalizedSpan>();
   for (const span of spans) {
@@ -50,12 +53,21 @@ export async function ingestSpans(sql: Sql, spans: readonly NormalizedSpan[]): P
   }
   const batch = [...unique.values()];
   if (batch.length === 0) {
-    return { receivedSpans: spans.length, acceptedSpans: 0, duplicateSpans: spans.length, traceIds: [] };
+    return {
+      receivedSpans: spans.length,
+      acceptedSpans: 0,
+      duplicateSpans: spans.length,
+      traceIds: [],
+    };
   }
 
   const traceIds = [...new Set(batch.map((s) => s.traceId))].sort();
   const serviceKeys = new Map<string, { name: string; environment: string }>();
-  for (const s of batch) serviceKeys.set(`${s.serviceName}\u0000${s.environment}`, { name: s.serviceName, environment: s.environment });
+  for (const s of batch)
+    serviceKeys.set(`${s.serviceName}\u0000${s.environment}`, {
+      name: s.serviceName,
+      environment: s.environment,
+    });
 
   const rows = batch.map((s) => ({
     trace_id: s.traceId,
@@ -146,7 +158,10 @@ export async function ingestSpans(sql: Sql, spans: readonly NormalizedSpan[]): P
  * stored — stands in so the trace still has a meaningful name in the list;
  * `has_root = false` marks the trace as incomplete.
  */
-export async function recomputeTraceSummaries(sql: Sql, traceIds: readonly string[]): Promise<void> {
+export async function recomputeTraceSummaries(
+  sql: Sql,
+  traceIds: readonly string[],
+): Promise<void> {
   if (traceIds.length === 0) return;
   await sql`
     with affected as (

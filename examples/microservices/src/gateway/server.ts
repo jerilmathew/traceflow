@@ -41,7 +41,9 @@ async function callJson<T>(
     spanName: `${(init.method ?? 'GET').toUpperCase()} ${route}`,
     headers: { 'content-type': 'application/json', ...(init.headers ?? {}) },
   });
-  const body = (await response.json().catch(() => ({}))) as { error?: { message?: string; code?: string } };
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: { message?: string; code?: string };
+  };
   if (!response.ok) {
     // Downstream 5xx → 502 Bad Gateway; downstream 4xx is passed through.
     const status = response.status >= 500 ? 502 : response.status;
@@ -56,43 +58,83 @@ async function callJson<T>(
 
 const app = createServer('api-gateway');
 
-app.post<{ Body: { userId?: string; sku?: string; quantity?: number } }>('/checkout', async (request) => {
-  const orderId = randomUUID();
+app.post<{ Body: { userId?: string; sku?: string; quantity?: number } }>(
+  '/checkout',
+  async (request) => {
+    const orderId = randomUUID();
 
-  const input = await withSpan('checkout.validate-request', {}, () => {
-    const { userId, sku, quantity = 1 } = request.body ?? {};
-    if (typeof userId !== 'string' || typeof sku !== 'string' || !Number.isInteger(quantity) || quantity <= 0) {
-      throw new HttpError(400, 'userId, sku and a positive integer quantity are required', 'invalid_request');
+    const input = await withSpan('checkout.validate-request', {}, () => {
+      const { userId, sku, quantity = 1 } = request.body ?? {};
+      if (
+        typeof userId !== 'string' ||
+        typeof sku !== 'string' ||
+        !Number.isInteger(quantity) ||
+        quantity <= 0
+      ) {
+        throw new HttpError(
+          400,
+          'userId, sku and a positive integer quantity are required',
+          'invalid_request',
+        );
+      }
+      return { userId, sku, quantity };
+    });
+
+    // Independent lookups run concurrently: the waterfall shows them overlapping.
+    const [user, item] = await Promise.all([
+      callJson<UserResponse>(
+        `${USERS_URL}/users/${encodeURIComponent(input.userId)}`,
+        'users-service',
+        '/users/:id',
+      ),
+      callJson<ItemResponse>(
+        `${INVENTORY_URL}/items/${encodeURIComponent(input.sku)}`,
+        'inventory-service',
+        '/items/:sku',
+      ),
+    ]);
+
+    if (!user.limits.canCheckout)
+      throw new HttpError(403, `account ${user.id} is ${user.status}`, 'account_inactive');
+    if (input.quantity > user.limits.maxItemsPerOrder) {
+      throw new HttpError(
+        422,
+        `quantity exceeds the ${user.limits.maxItemsPerOrder}-item limit for ${user.tier} accounts`,
+        'limit_exceeded',
+      );
     }
-    return { userId, sku, quantity };
-  });
 
-  // Independent lookups run concurrently: the waterfall shows them overlapping.
-  const [user, item] = await Promise.all([
-    callJson<UserResponse>(`${USERS_URL}/users/${encodeURIComponent(input.userId)}`, 'users-service', '/users/:id'),
-    callJson<ItemResponse>(`${INVENTORY_URL}/items/${encodeURIComponent(input.sku)}`, 'inventory-service', '/items/:sku'),
-  ]);
+    const reservation = await callJson<ReservationResponse>(
+      `${INVENTORY_URL}/reservations`,
+      'inventory-service',
+      '/reservations',
+      {
+        method: 'POST',
+        body: JSON.stringify({ sku: input.sku, quantity: input.quantity, orderId }),
+      },
+    );
 
-  if (!user.limits.canCheckout) throw new HttpError(403, `account ${user.id} is ${user.status}`, 'account_inactive');
-  if (input.quantity > user.limits.maxItemsPerOrder) {
-    throw new HttpError(422, `quantity exceeds the ${user.limits.maxItemsPerOrder}-item limit for ${user.tier} accounts`, 'limit_exceeded');
-  }
+    const total = await withSpan(
+      'checkout.calculate-total',
+      { 'order.quantity': input.quantity },
+      (span) => {
+        const subtotal = reservation.unitPriceCents * input.quantity;
+        const discount = user.tier === 'plus' ? Math.round(subtotal * 0.05) : 0;
+        const tax = Math.round((subtotal - discount) * 0.2);
+        span.setAttribute('order.total_cents', subtotal - discount + tax);
+        return { subtotal, discount, tax, total: subtotal - discount + tax };
+      },
+    );
 
-  const reservation = await callJson<ReservationResponse>(`${INVENTORY_URL}/reservations`, 'inventory-service', '/reservations', {
-    method: 'POST',
-    body: JSON.stringify({ sku: input.sku, quantity: input.quantity, orderId }),
-  });
-
-  const total = await withSpan('checkout.calculate-total', { 'order.quantity': input.quantity }, (span) => {
-    const subtotal = reservation.unitPriceCents * input.quantity;
-    const discount = user.tier === 'plus' ? Math.round(subtotal * 0.05) : 0;
-    const tax = Math.round((subtotal - discount) * 0.2);
-    span.setAttribute('order.total_cents', subtotal - discount + tax);
-    return { subtotal, discount, tax, total: subtotal - discount + tax };
-  });
-
-  return { orderId, status: 'confirmed', item: item.name, reservationId: reservation.reservationId, amountCents: total };
-});
+    return {
+      orderId,
+      status: 'confirmed',
+      item: item.name,
+      reservationId: reservation.reservationId,
+      amountCents: total,
+    };
+  },
+);
 
 app.get<{ Params: { sku: string } }>('/products/:sku', async (request) =>
   callJson<ItemResponse>(

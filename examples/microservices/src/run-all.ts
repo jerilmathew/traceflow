@@ -18,20 +18,24 @@ const services = [
 const children: ChildProcess[] = [];
 
 function start(name: string, color: string): ChildProcess {
-    // `--import tsx` enables TypeScript; the instrument file then starts the
+  // `--import tsx` enables TypeScript; the instrument file then starts the
   // OpenTelemetry SDK before the service's own modules are loaded.
   const child = spawn(
     process.execPath,
     ['--import', 'tsx', '--import', `./src/${name}/instrument.ts`, `src/${name}/server.ts`],
     {
-    cwd: root,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: root,
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
     },
   );
   const prefix = `${color}[${name}]\x1b[0m `;
   const pipe = (data: Buffer) =>
-    data.toString().split('\n').filter(Boolean).forEach((line) => console.log(prefix + line));
+    data
+      .toString()
+      .split('\n')
+      .filter(Boolean)
+      .forEach((line) => console.log(prefix + line));
   child.stdout?.on('data', pipe);
   child.stderr?.on('data', pipe);
   child.on('exit', (code) => {

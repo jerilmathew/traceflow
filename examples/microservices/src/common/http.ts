@@ -32,10 +32,14 @@ export function createServer(serviceName: string): FastifyInstance {
     const status = error instanceof HttpError ? error.statusCode : (error.statusCode ?? 500);
     if (status >= 500) {
       failActiveSpan(error);
-      request.log.error({ err: error }, 'request failed');
+      // The full exception (with stack) is recorded on the span; keep stdout readable.
+      request.log.error({ code: error.code, message: error.message }, 'request failed');
     }
     void reply.status(status).send({
-      error: { code: error instanceof HttpError ? error.code : (error.code ?? 'internal_error'), message: error.message },
+      error: {
+        code: error instanceof HttpError ? error.code : (error.code ?? 'internal_error'),
+        message: error.message,
+      },
       traceId: currentTraceId(),
     });
   });

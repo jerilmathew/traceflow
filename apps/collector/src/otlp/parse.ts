@@ -18,7 +18,12 @@
  * reason while valid spans in the same request are still accepted, which maps
  * onto OTLP's `partialSuccess` response.
  */
-import { isValidSpanId, isValidTraceId, type AttributeValue, type Attributes } from '@traceflow/shared';
+import {
+  isValidSpanId,
+  isValidTraceId,
+  type AttributeValue,
+  type Attributes,
+} from '@traceflow/shared';
 
 export const LIMITS = {
   maxSpansPerRequest: 10_000,
@@ -97,7 +102,8 @@ export class PayloadError extends Error {
 type Json = unknown;
 type JsonObject = Record<string, Json>;
 
-const isObject = (v: Json): v is JsonObject => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isObject = (v: Json): v is JsonObject =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Read a field by its canonical camelCase name or its snake_case alias. */
 function field(obj: JsonObject, camel: string): Json {
@@ -164,7 +170,8 @@ const STATUS_NAMES: Record<string, number> = {
 
 function parseEnum(value: Json, names: Record<string, number>, max: number, label: string): number {
   if (value === undefined || value === null) return 0;
-  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= max) return value;
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= max)
+    return value;
   if (typeof value === 'string' && value in names) return names[value]!;
   throw new PayloadError(`invalid ${label} "${String(value).slice(0, 64)}"`);
 }
@@ -176,7 +183,9 @@ function parseEnum(value: Json, names: Record<string, number>, max: number, labe
 function truncate(raw: string, max: number): string {
   // eslint-disable-next-line no-control-regex
   const value = raw.includes('\u0000') ? raw.replace(/\u0000/g, '') : raw;
-  return value.length > max ? `${value.slice(0, max)}…[truncated ${value.length - max} chars]` : value;
+  return value.length > max
+    ? `${value.slice(0, max)}…[truncated ${value.length - max} chars]`
+    : value;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,14 +224,18 @@ export function parseAnyValue(value: Json, depth = 0): AttributeValue {
     return parseKeyValues(values, depth + 1).attributes;
   }
   const bytes = field(value, 'bytesValue');
-  if (bytes !== undefined) return truncate(`base64:${String(bytes)}`, LIMITS.maxAttributeValueLength);
+  if (bytes !== undefined)
+    return truncate(`base64:${String(bytes)}`, LIMITS.maxAttributeValueLength);
   return null;
 }
 
 /** Keys that could pollute Object.prototype when assigned with `obj[key] = …`. */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
-export function parseKeyValues(list: Json[], depth = 0): { attributes: Attributes; dropped: number } {
+export function parseKeyValues(
+  list: Json[],
+  depth = 0,
+): { attributes: Attributes; dropped: number } {
   const attributes: Attributes = Object.create(null) as Attributes;
   let dropped = 0;
   for (const item of list) {
@@ -274,7 +287,10 @@ export function parseExportTraceServiceRequest(body: Json): ParseResult {
       isObject(resource) ? arrayField(resource, 'attributes') : [],
     );
     // The OTel SDK always sets service.name (falling back to "unknown_service:<process>").
-    const serviceName = truncate(stringAttr(resourceAttributes, 'service.name') ?? 'unknown_service', 256);
+    const serviceName = truncate(
+      stringAttr(resourceAttributes, 'service.name') ?? 'unknown_service',
+      256,
+    );
     const environment = truncate(
       stringAttr(resourceAttributes, 'deployment.environment.name') ??
         stringAttr(resourceAttributes, 'deployment.environment') ??
@@ -285,7 +301,8 @@ export function parseExportTraceServiceRequest(body: Json): ParseResult {
     for (const ss of arrayField(rs, 'scopeSpans')) {
       if (!isObject(ss)) throw new PayloadError('scopeSpans entries must be objects');
       const scope = field(ss, 'scope');
-      const scopeName = isObject(scope) && typeof scope.name === 'string' ? truncate(scope.name, 256) : null;
+      const scopeName =
+        isObject(scope) && typeof scope.name === 'string' ? truncate(scope.name, 256) : null;
 
       for (const raw of arrayField(ss, 'spans')) {
         const currentIndex = index++;
@@ -301,7 +318,10 @@ export function parseExportTraceServiceRequest(body: Json): ParseResult {
         } catch (error) {
           if (!(error instanceof PayloadError)) throw error;
           const ids = isObject(raw)
-            ? { traceId: safeString(field(raw, 'traceId')), spanId: safeString(field(raw, 'spanId')) }
+            ? {
+                traceId: safeString(field(raw, 'traceId')),
+                spanId: safeString(field(raw, 'spanId')),
+              }
             : {};
           rejected.push({ index: currentIndex, ...ids, reason: error.message });
         }
@@ -335,7 +355,8 @@ export function normalizeSpan(raw: Json, ctx: ResourceContext): NormalizedSpan {
   if (parentSpanId === spanId) throw new PayloadError('span cannot be its own parent');
 
   const name = field(raw, 'name');
-  if (typeof name !== 'string' || name.trim() === '') throw new PayloadError('span name is required');
+  if (typeof name !== 'string' || name.trim() === '')
+    throw new PayloadError('span name is required');
 
   const start = parseUint64(field(raw, 'startTimeUnixNano'), 'startTimeUnixNano');
   const end = parseUint64(field(raw, 'endTimeUnixNano'), 'endTimeUnixNano');
@@ -366,7 +387,10 @@ export function normalizeSpan(raw: Json, ctx: ResourceContext): NormalizedSpan {
     }
     const evTime = parseUint64(field(ev, 'timeUnixNano') ?? '0', 'event timeUnixNano');
     events.push({
-      name: truncate(typeof ev.name === 'string' ? ev.name : '(unnamed event)', LIMITS.maxNameLength),
+      name: truncate(
+        typeof ev.name === 'string' ? ev.name : '(unnamed event)',
+        LIMITS.maxNameLength,
+      ),
       timeUnixNano: evTime.toString(),
       attributes: parseKeyValues(arrayField(ev, 'attributes')).attributes,
     });

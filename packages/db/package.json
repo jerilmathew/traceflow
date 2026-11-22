@@ -9,7 +9,8 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate-cli.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "reset": "tsx src/reset-cli.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

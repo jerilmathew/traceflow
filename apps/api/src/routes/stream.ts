@@ -24,7 +24,9 @@ export function registerStream(app: FastifyInstance, live: LiveHub): void {
 
   app.get('/api/stream', (request, reply) => {
     if (clients >= MAX_CLIENTS) {
-      void reply.status(503).send({ error: { code: 'too_many_streams', message: 'too many live connections' } });
+      void reply
+        .status(503)
+        .send({ error: { code: 'too_many_streams', message: 'too many live connections' } });
       return;
     }
     clients++;
@@ -57,7 +59,8 @@ export function registerStream(app: FastifyInstance, live: LiveHub): void {
         res.destroy();
       }
     };
-    const send = (event: string, data: unknown) => write(`id: ${++seq}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    const send = (event: string, data: unknown) =>
+      write(`id: ${++seq}\nevent: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 
     write('retry: 3000\n\n');
     send('ready', {});

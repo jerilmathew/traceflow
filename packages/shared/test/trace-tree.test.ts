@@ -50,18 +50,27 @@ describe('buildTraceTree', () => {
   });
 
   it('flags spans whose parent has not arrived as orphan roots', () => {
-    const tree = buildTraceTree([span('child', 'missing-parent', 50, 10), span('root', null, 0, 100)]);
+    const tree = buildTraceTree([
+      span('child', 'missing-parent', 50, 10),
+      span('root', null, 0, 100),
+    ]);
     expect(tree.roots.map((r) => r.span.spanId)).toEqual(['root', 'child']);
     expect(tree.byId.get('child')!.orphan).toBe(true);
     expect(tree.orphanCount).toBe(1);
   });
 
   it('breaks parent cycles instead of dropping or looping forever', () => {
-    const tree = buildTraceTree([span('a', 'b', 0, 10), span('b', 'a', 1, 5), span('self', 'self', 2, 1)]);
+    const tree = buildTraceTree([
+      span('a', 'b', 0, 10),
+      span('b', 'a', 1, 5),
+      span('self', 'self', 2, 1),
+    ]);
     const allIds = flattenTree(tree.roots).map((r) => r.node.span.spanId);
     expect(allIds.sort()).toEqual(['a', 'b', 'self']);
     expect(tree.byId.get('self')!.cycleBroken).toBe(true);
-    expect([...tree.byId.values()].some((n) => n.span.spanId !== 'self' && n.cycleBroken)).toBe(true);
+    expect([...tree.byId.values()].some((n) => n.span.spanId !== 'self' && n.cycleBroken)).toBe(
+      true,
+    );
   });
 
   it('keeps the first copy of duplicated span ids', () => {
@@ -98,8 +107,19 @@ describe('flattenTree', () => {
 describe('timing analysis', () => {
   it('computes interval unions', () => {
     expect(unionLength([])).toBe(0);
-    expect(unionLength([[0, 10], [5, 15], [20, 30]])).toBe(25);
-    expect(unionLength([[0, 10], [2, 3]])).toBe(10);
+    expect(
+      unionLength([
+        [0, 10],
+        [5, 15],
+        [20, 30],
+      ]),
+    ).toBe(25);
+    expect(
+      unionLength([
+        [0, 10],
+        [2, 3],
+      ]),
+    ).toBe(10);
   });
 
   it('computes self time excluding (overlapping) children', () => {

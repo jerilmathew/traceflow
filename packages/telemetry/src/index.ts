@@ -84,7 +84,9 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK {
         // Health probes are noise; don't trace them.
         ignoreIncomingRequestHook: (req) => req.url === '/health',
       }),
-      ...(options.postgres ? [new PgInstrumentation({ ignoreConnectSpans: true, requireParentSpan: true })] : []),
+      ...(options.postgres
+        ? [new PgInstrumentation({ ignoreConnectSpans: true, requireParentSpan: true })]
+        : []),
     ],
   });
   sdk.start();
@@ -126,7 +128,10 @@ export interface TracedFetchInit extends RequestInit {
  *   3. the callee's HTTP instrumentation extracts that header and starts its
  *      SERVER span with *this* span as parent — same trace id, linked spans.
  */
-export async function tracedFetch(url: string | URL, init: TracedFetchInit = {}): Promise<Response> {
+export async function tracedFetch(
+  url: string | URL,
+  init: TracedFetchInit = {},
+): Promise<Response> {
   const tracer = trace.getTracer('@traceflow/telemetry');
   const target = new URL(url);
   const method = (init.method ?? 'GET').toUpperCase();

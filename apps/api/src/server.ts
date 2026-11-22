@@ -6,7 +6,9 @@ const config = loadConfig();
 const { sql, close } = createDb({ url: config.DATABASE_URL, applicationName: 'traceflow-api' });
 const app = await buildApi({
   sql,
-  corsOrigins: config.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
+  corsOrigins: config.CORS_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
   logLevel: config.LOG_LEVEL,
   serveWeb: config.SERVE_WEB,
 });
@@ -21,4 +23,6 @@ process.once('SIGINT', () => void shutdown('SIGINT'));
 process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
 await app.listen({ host: config.API_HOST, port: config.API_PORT });
-app.log.info(`TraceFlow API ready on http://${config.API_HOST}:${config.API_PORT} (db ${redactUrl(config.DATABASE_URL)})`);
+app.log.info(
+  `TraceFlow API ready on http://${config.API_HOST}:${config.API_PORT} (db ${redactUrl(config.DATABASE_URL)})`,
+);

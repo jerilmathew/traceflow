@@ -192,7 +192,9 @@ export function selfTimeMs<T extends TimedSpan>(node: TraceTreeNode<T>): number 
  * chosen children are the parent's own critical time. This is the same idea
  * Jaeger uses. Returns ms of critical-path time attributed to each span id.
  */
-export function criticalPath<T extends TimedSpan>(roots: readonly TraceTreeNode<T>[]): Map<string, number> {
+export function criticalPath<T extends TimedSpan>(
+  roots: readonly TraceTreeNode<T>[],
+): Map<string, number> {
   const contribution = new Map<string, number>();
   const add = (id: string, ms: number) => {
     if (ms > 0) contribution.set(id, (contribution.get(id) ?? 0) + ms);

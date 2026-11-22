@@ -13,6 +13,7 @@
     "db:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d postgres",
     "db:down": "docker compose -f infrastructure/docker/docker-compose.yml down",
     "db:migrate": "pnpm --filter @traceflow/db migrate",
+    "db:reset": "pnpm --filter @traceflow/db reset",
     "db:generate": "pnpm --filter @traceflow/db generate",
     "dev": "concurrently -k -n collector,api,web -c magenta,blue,cyan \"pnpm --filter @traceflow/collector dev\" \"pnpm --filter @traceflow/api dev\" \"pnpm --filter @traceflow/web dev\"",
     "demo:services": "pnpm --filter @traceflow/example-microservices start",

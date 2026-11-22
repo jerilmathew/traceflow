@@ -2,11 +2,23 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { parse as parseYaml } from 'yaml';
-import { latencyPercentiles, type DependencyGraph, type Paginated, type ServiceDetail, type TraceDetail, type TraceSummary } from '@traceflow/shared';
+import {
+  latencyPercentiles,
+  type DependencyGraph,
+  type Paginated,
+  type ServiceDetail,
+  type TraceDetail,
+  type TraceSummary,
+} from '@traceflow/shared';
 import { resetDb, testDb } from '../../../../test/db';
 import { ingestSpans } from '../../../collector/src/ingest';
 import { parseExportTraceServiceRequest } from '../../../collector/src/otlp/parse';
-import { otlpPayload, randomSpanId, randomTraceId, type TestSpan } from '../../../collector/test/helpers';
+import {
+  otlpPayload,
+  randomSpanId,
+  randomTraceId,
+  type TestSpan,
+} from '../../../collector/test/helpers';
 import { OPENAPI_PATH, buildApi } from '../../src/app';
 
 const db = testDb();
@@ -43,15 +55,57 @@ async function seedCheckout(opts: { inventoryMs?: number; fail?: boolean; startM
   const invServer = randomSpanId();
   await ingest({
     'api-gateway': [
-      { traceId, spanId: root, name: 'POST /checkout', kind: 2, startMs: start, durationMs: inv + 40, statusCode: opts.fail ? 2 : 0 },
-      { traceId, spanId: usersClient, parentSpanId: root, name: 'GET /users/:id', kind: 3, startMs: start + 2, durationMs: 10 },
-      { traceId, spanId: invClient, parentSpanId: root, name: 'POST /reservations', kind: 3, startMs: start + 15, durationMs: inv + 4, statusCode: opts.fail ? 2 : 0 },
+      {
+        traceId,
+        spanId: root,
+        name: 'POST /checkout',
+        kind: 2,
+        startMs: start,
+        durationMs: inv + 40,
+        statusCode: opts.fail ? 2 : 0,
+      },
+      {
+        traceId,
+        spanId: usersClient,
+        parentSpanId: root,
+        name: 'GET /users/:id',
+        kind: 3,
+        startMs: start + 2,
+        durationMs: 10,
+      },
+      {
+        traceId,
+        spanId: invClient,
+        parentSpanId: root,
+        name: 'POST /reservations',
+        kind: 3,
+        startMs: start + 15,
+        durationMs: inv + 4,
+        statusCode: opts.fail ? 2 : 0,
+      },
     ],
     'users-service': [
-      { traceId, spanId: randomSpanId(), parentSpanId: usersClient, name: 'GET /users/:id', kind: 2, startMs: start + 3, durationMs: 8 },
+      {
+        traceId,
+        spanId: randomSpanId(),
+        parentSpanId: usersClient,
+        name: 'GET /users/:id',
+        kind: 2,
+        startMs: start + 3,
+        durationMs: 8,
+      },
     ],
     'inventory-service': [
-      { traceId, spanId: invServer, parentSpanId: invClient, name: 'POST /reservations', kind: 2, startMs: start + 16, durationMs: inv, statusCode: opts.fail ? 2 : 0 },
+      {
+        traceId,
+        spanId: invServer,
+        parentSpanId: invClient,
+        name: 'POST /reservations',
+        kind: 2,
+        startMs: start + 16,
+        durationMs: inv,
+        statusCode: opts.fail ? 2 : 0,
+      },
       {
         traceId,
         spanId: randomSpanId(),
@@ -62,7 +116,15 @@ async function seedCheckout(opts: { inventoryMs?: number; fail?: boolean; startM
         durationMs: inv - 5,
         statusCode: opts.fail ? 2 : 0,
         attributes: { 'db.system': 'postgresql', 'db.name': 'inventory_demo' },
-        events: opts.fail ? [{ name: 'exception', atMs: start + 20, attributes: { 'exception.message': 'check constraint' } }] : [],
+        events: opts.fail
+          ? [
+              {
+                name: 'exception',
+                atMs: start + 20,
+                attributes: { 'exception.message': 'check constraint' },
+              },
+            ]
+          : [],
       },
     ],
   });
@@ -91,10 +153,22 @@ describe('GET /api/traces', () => {
     const fast = await seedCheckout({ inventoryMs: 20 });
     const slow = await seedCheckout({ inventoryMs: 450 });
     const failed = await seedCheckout({ inventoryMs: 30, fail: true });
-    await ingest({ lonely: [{ traceId: randomTraceId(), spanId: randomSpanId(), name: 'cron.cleanup', startMs: 0, durationMs: 5 }] });
+    await ingest({
+      lonely: [
+        {
+          traceId: randomTraceId(),
+          spanId: randomSpanId(),
+          name: 'cron.cleanup',
+          startMs: 0,
+          durationMs: 5,
+        },
+      ],
+    });
 
     const ids = async (query: string) =>
-      (await get<Paginated<TraceSummary>>(`/api/traces?${query}`)).body.items.map((t) => t.traceId).sort();
+      (await get<Paginated<TraceSummary>>(`/api/traces?${query}`)).body.items
+        .map((t) => t.traceId)
+        .sort();
 
     expect(await ids('status=error')).toEqual([failed]);
     expect(await ids('minDurationMs=400')).toEqual([slow]);
@@ -107,9 +181,15 @@ describe('GET /api/traces', () => {
 
   it('sorts and paginates', async () => {
     for (const ms of [100, 300, 200, 50, 400]) await seedCheckout({ inventoryMs: ms });
-    const page1 = (await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2')).body;
-    const page2 = (await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2&page=2')).body;
-    const page3 = (await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2&page=3')).body;
+    const page1 = (
+      await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2')
+    ).body;
+    const page2 = (
+      await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2&page=2')
+    ).body;
+    const page3 = (
+      await get<Paginated<TraceSummary>>('/api/traces?sort=duration&order=desc&pageSize=2&page=3')
+    ).body;
     expect(page1.total).toBe(5);
     const durations = [...page1.items, ...page2.items, ...page3.items].map((t) => t.durationMs);
     expect(durations).toEqual([440, 340, 240, 140, 90]);
@@ -119,11 +199,16 @@ describe('GET /api/traces', () => {
   it('filters by time range', async () => {
     await seedCheckout();
     const future = new Date(Date.now() + 60_000).toISOString();
-    expect((await get<Paginated<TraceSummary>>(`/api/traces?from=${encodeURIComponent(future)}`)).body.total).toBe(0);
+    expect(
+      (await get<Paginated<TraceSummary>>(`/api/traces?from=${encodeURIComponent(future)}`)).body
+        .total,
+    ).toBe(0);
   });
 
   it('validates query parameters with a consistent error shape', async () => {
-    const res = await get<{ error: { code: string; details: unknown[] } }>('/api/traces?pageSize=1000&sort=bogus');
+    const res = await get<{ error: { code: string; details: unknown[] } }>(
+      '/api/traces?pageSize=1000&sort=bogus',
+    );
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('invalid_request');
     expect(res.body.error.details.length).toBeGreaterThanOrEqual(2);
@@ -149,7 +234,9 @@ describe('GET /api/traces/:id', () => {
     // Parent links survive the round trip.
     const parent = body.spans.find((s) => s.spanId === db.parentSpanId)!;
     expect(parent.service).toBe('inventory-service');
-    expect(BigInt(db.startTimeUnixNano) - BigInt(body.spans[0]!.startTimeUnixNano)).toBe(18_000_000n);
+    expect(BigInt(db.startTimeUnixNano) - BigInt(body.spans[0]!.startTimeUnixNano)).toBe(
+      18_000_000n,
+    );
   });
 
   it('404s for unknown traces and 400s for malformed ids', async () => {
@@ -165,9 +252,13 @@ describe('metrics', () => {
     for (const ms of latencies) await seedCheckout({ inventoryMs: ms });
     await seedCheckout({ inventoryMs: 25, fail: true });
 
-    const { body } = await get<{ traceCount: number; errorRate: number; latency: Record<string, number>; serviceCount: number; timeseries: Array<{ count: number }> }>(
-      '/api/overview?window=15m',
-    );
+    const { body } = await get<{
+      traceCount: number;
+      errorRate: number;
+      latency: Record<string, number>;
+      serviceCount: number;
+      timeseries: Array<{ count: number }>;
+    }>('/api/overview?window=15m');
     expect(body.traceCount).toBe(11);
     expect(body.errorRate).toBeCloseTo(1 / 11, 10);
     expect(body.serviceCount).toBe(3);
@@ -183,25 +274,47 @@ describe('metrics', () => {
     await seedCheckout({ inventoryMs: 40 });
     await seedCheckout({ inventoryMs: 80, fail: true });
     // An orphan span from a fourth service: its caller is unknown, so no edge may be invented.
-    await ingest({ billing: [{ traceId: randomTraceId(), spanId: randomSpanId(), parentSpanId: randomSpanId(), name: 'charge', kind: 2, startMs: 0, durationMs: 5 }] });
+    await ingest({
+      billing: [
+        {
+          traceId: randomTraceId(),
+          spanId: randomSpanId(),
+          parentSpanId: randomSpanId(),
+          name: 'charge',
+          kind: 2,
+          startMs: 0,
+          durationMs: 5,
+        },
+      ],
+    });
 
     const { body } = await get<DependencyGraph>('/api/dependencies?window=15m');
-    const edges = body.edges.map((e) => `${e.source}->${e.target}:${e.targetKind}:${e.callCount}:${e.errorCount}`);
+    const edges = body.edges.map(
+      (e) => `${e.source}->${e.target}:${e.targetKind}:${e.callCount}:${e.errorCount}`,
+    );
     expect(edges).toEqual([
       'api-gateway->inventory-service:service:2:1',
       'api-gateway->users-service:service:2:0',
       'inventory-service->postgresql:inventory_demo:database:2:1',
     ]);
     expect(body.edges.some((e) => e.source === 'billing' || e.target === 'billing')).toBe(false);
-    expect(body.nodes.find((n) => n.id === 'postgresql:inventory_demo')).toMatchObject({ kind: 'database', requestCount: 2 });
-    expect(body.nodes.find((n) => n.id === 'billing')).toMatchObject({ kind: 'service', requestCount: 1 });
+    expect(body.nodes.find((n) => n.id === 'postgresql:inventory_demo')).toMatchObject({
+      kind: 'database',
+      requestCount: 2,
+    });
+    expect(body.nodes.find((n) => n.id === 'billing')).toMatchObject({
+      kind: 'service',
+      requestCount: 1,
+    });
   });
 
   it('reports per-service RED metrics, operations and a latency histogram', async () => {
     for (const ms of [10, 30, 70]) await seedCheckout({ inventoryMs: ms });
     await seedCheckout({ inventoryMs: 600, fail: true });
 
-    const list = await get<{ items: Array<{ name: string; requestCount: number; errorCount: number }> }>('/api/services?window=15m');
+    const list = await get<{
+      items: Array<{ name: string; requestCount: number; errorCount: number }>;
+    }>('/api/services?window=15m');
     expect(list.body.items.map((s) => [s.name, s.requestCount, s.errorCount])).toEqual([
       ['api-gateway', 4, 1],
       ['inventory-service', 4, 1],
@@ -231,7 +344,8 @@ describe('GET /api/stream (SSE)', () => {
     await live.listen({ host: '127.0.0.1', port: 0 });
     const { port } = live.server.address() as AddressInfo;
     // Wait until LISTEN is active.
-    for (let i = 0; i < 50 && !live.live.listening; i++) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 0; i < 50 && !live.live.listening; i++)
+      await new Promise((r) => setTimeout(r, 50));
 
     const controller = new AbortController();
     const res = await fetch(`http://127.0.0.1:${port}/api/stream`, { signal: controller.signal });
@@ -260,7 +374,8 @@ describe('GET /api/stream (SSE)', () => {
 
     controller.abort();
     // The server must release the subscription when the client disconnects.
-    for (let i = 0; i < 50 && live.live.subscriberCount > 0; i++) await new Promise((r) => setTimeout(r, 20));
+    for (let i = 0; i < 50 && live.live.subscriberCount > 0; i++)
+      await new Promise((r) => setTimeout(r, 20));
     expect(live.live.subscriberCount).toBe(0);
     await live.close();
   });
@@ -268,7 +383,9 @@ describe('GET /api/stream (SSE)', () => {
 
 describe('API surface', () => {
   it('documents every route in docs/openapi.yaml', () => {
-    const spec = parseYaml(readFileSync(OPENAPI_PATH, 'utf8')) as { paths: Record<string, unknown> };
+    const spec = parseYaml(readFileSync(OPENAPI_PATH, 'utf8')) as {
+      paths: Record<string, unknown>;
+    };
     const documented = new Set(Object.keys(spec.paths).map((p) => p.replace(/\{(\w+)\}/g, ':$1')));
     const routes = app
       .printRoutes({ commonPrefix: false })
@@ -288,9 +405,23 @@ describe('API surface', () => {
   });
 
   it('restricts CORS to configured origins', async () => {
-    const restricted = await buildApi({ sql: db.sql, logLevel: 'silent', serveWeb: false, live: false, corsOrigins: ['http://localhost:5180'] });
-    const allowed = await restricted.inject({ method: 'GET', url: '/api/health', headers: { origin: 'http://localhost:5180' } });
-    const denied = await restricted.inject({ method: 'GET', url: '/api/health', headers: { origin: 'https://evil.example' } });
+    const restricted = await buildApi({
+      sql: db.sql,
+      logLevel: 'silent',
+      serveWeb: false,
+      live: false,
+      corsOrigins: ['http://localhost:5180'],
+    });
+    const allowed = await restricted.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { origin: 'http://localhost:5180' },
+    });
+    const denied = await restricted.inject({
+      method: 'GET',
+      url: '/api/health',
+      headers: { origin: 'https://evil.example' },
+    });
     expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:5180');
     expect(denied.headers['access-control-allow-origin']).toBeUndefined();
     await restricted.close();

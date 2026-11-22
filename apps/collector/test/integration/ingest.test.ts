@@ -23,7 +23,8 @@ const post = (payload: unknown, headers: Record<string, string> = {}) =>
     method: 'POST',
     url: '/v1/traces',
     headers: { 'content-type': 'application/json', ...headers },
-    payload: typeof payload === 'string' || Buffer.isBuffer(payload) ? payload : JSON.stringify(payload),
+    payload:
+      typeof payload === 'string' || Buffer.isBuffer(payload) ? payload : JSON.stringify(payload),
   });
 
 const traceRow = async (traceId: string) => {
@@ -34,16 +35,46 @@ const traceRow = async (traceId: string) => {
 /** gateway → users, gateway → inventory → db, as three services. */
 function checkoutTrace() {
   const traceId = randomTraceId();
-  const ids = { root: randomSpanId(), usersClient: randomSpanId(), users: randomSpanId(), inv: randomSpanId(), db: randomSpanId() };
+  const ids = {
+    root: randomSpanId(),
+    usersClient: randomSpanId(),
+    users: randomSpanId(),
+    inv: randomSpanId(),
+    db: randomSpanId(),
+  };
   const gateway: TestSpan[] = [
     { traceId, spanId: ids.root, name: 'POST /checkout', kind: 2, startMs: 0, durationMs: 480 },
-    { traceId, spanId: ids.usersClient, parentSpanId: ids.root, name: 'GET /users/:id', kind: 3, startMs: 10, durationMs: 80 },
+    {
+      traceId,
+      spanId: ids.usersClient,
+      parentSpanId: ids.root,
+      name: 'GET /users/:id',
+      kind: 3,
+      startMs: 10,
+      durationMs: 80,
+    },
   ];
   const users: TestSpan[] = [
-    { traceId, spanId: ids.users, parentSpanId: ids.usersClient, name: 'GET /users/:id', kind: 2, startMs: 12, durationMs: 75 },
+    {
+      traceId,
+      spanId: ids.users,
+      parentSpanId: ids.usersClient,
+      name: 'GET /users/:id',
+      kind: 2,
+      startMs: 12,
+      durationMs: 75,
+    },
   ];
   const inventory: TestSpan[] = [
-    { traceId, spanId: ids.inv, parentSpanId: ids.root, name: 'POST /reservations', kind: 2, startMs: 100, durationMs: 300 },
+    {
+      traceId,
+      spanId: ids.inv,
+      parentSpanId: ids.root,
+      name: 'POST /reservations',
+      kind: 2,
+      startMs: 100,
+      durationMs: 300,
+    },
     {
       traceId,
       spanId: ids.db,
@@ -63,13 +94,20 @@ function checkoutTrace() {
 describe('POST /v1/traces → PostgreSQL', () => {
   it('persists spans and builds a trace summary', async () => {
     const t = checkoutTrace();
-    const res = await post(otlpPayload({ 'api-gateway': t.gateway, users: t.users, inventory: t.inventory }));
+    const res = await post(
+      otlpPayload({ 'api-gateway': t.gateway, users: t.users, inventory: t.inventory }),
+    );
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({});
 
-    const spans = await db.sql`select span_id, parent_span_id, duration_ms, is_error from spans where trace_id = ${t.traceId}`;
+    const spans =
+      await db.sql`select span_id, parent_span_id, duration_ms, is_error from spans where trace_id = ${t.traceId}`;
     expect(spans).toHaveLength(5);
-    expect(spans.find((s) => s.span_id === t.ids.db)).toMatchObject({ parent_span_id: t.ids.inv, duration_ms: 260, is_error: true });
+    expect(spans.find((s) => s.span_id === t.ids.db)).toMatchObject({
+      parent_span_id: t.ids.inv,
+      duration_ms: 260,
+      is_error: true,
+    });
 
     const row = await traceRow(t.traceId);
     expect(row).toMatchObject({
@@ -92,7 +130,10 @@ describe('POST /v1/traces → PostgreSQL', () => {
     await post(otlpPayload({ 'api-gateway': checkoutTrace().gateway }, 'staging'));
     await post(otlpPayload({ 'api-gateway': checkoutTrace().gateway }, 'prod'));
     const rows = await db.sql`select name, environment from services order by environment`;
-    expect(rows.map((r) => `${r.name}/${r.environment}`)).toEqual(['api-gateway/prod', 'api-gateway/staging']);
+    expect(rows.map((r) => `${r.name}/${r.environment}`)).toEqual([
+      'api-gateway/prod',
+      'api-gateway/staging',
+    ]);
   });
 
   it('is idempotent: re-sending the same batch does not duplicate spans', async () => {
@@ -102,7 +143,10 @@ describe('POST /v1/traces → PostgreSQL', () => {
     const before = await traceRow(t.traceId);
     // An exporter retry sends the identical batch again.
     expect((await post(payload)).statusCode).toBe(200);
-    const [{ count }] = (await db.sql`select count(*)::int as count from spans where trace_id = ${t.traceId}`) as unknown as [{ count: number }];
+    const [{ count }] =
+      (await db.sql`select count(*)::int as count from spans where trace_id = ${t.traceId}`) as unknown as [
+        { count: number },
+      ];
     expect(count).toBe(3);
     const after = await traceRow(t.traceId);
     expect(after!.span_count).toBe(before!.span_count);
@@ -120,7 +164,12 @@ describe('POST /v1/traces → PostgreSQL', () => {
     // The database span and the inventory server span arrive first…
     await post(otlpPayload({ inventory: t.inventory }));
     let row = await traceRow(t.traceId);
-    expect(row).toMatchObject({ has_root: false, span_count: 2, orphan_count: 1, root_operation: 'POST /reservations' });
+    expect(row).toMatchObject({
+      has_root: false,
+      span_count: 2,
+      orphan_count: 1,
+      root_operation: 'POST /reservations',
+    });
     expect(row!.duration_ms).toBe(300);
 
     // …then the users span, whose parent (gateway client span) is still missing…
@@ -154,7 +203,11 @@ describe('POST /v1/traces → PostgreSQL', () => {
     for (const order of orders) {
       await resetDb(db);
       const t = checkoutTrace();
-      const parts = { gateway: { 'api-gateway': t.gateway }, users: { users: t.users }, inventory: { inventory: t.inventory } };
+      const parts = {
+        gateway: { 'api-gateway': t.gateway },
+        users: { users: t.users },
+        inventory: { inventory: t.inventory },
+      };
       for (const part of order) await post(otlpPayload(parts[part]));
       const row = await traceRow(t.traceId);
       summaries.push({
@@ -187,11 +240,19 @@ describe('POST /v1/traces → PostgreSQL', () => {
       ...Array.from({ length: 8 }, (_, b) => children.slice(b * 5, b * 5 + 5)),
     ];
     // Nine requests for one trace, all in flight at once, each from a separate service.
-    const responses = await Promise.all(batches.map((spans, i) => post(otlpPayload({ [`svc-${i}`]: spans }))));
+    const responses = await Promise.all(
+      batches.map((spans, i) => post(otlpPayload({ [`svc-${i}`]: spans }))),
+    );
     expect(responses.every((r) => r.statusCode === 200)).toBe(true);
 
     const row = await traceRow(traceId);
-    expect(row).toMatchObject({ span_count: 41, error_count: 4, has_root: true, orphan_count: 0, root_operation: 'root' });
+    expect(row).toMatchObject({
+      span_count: 41,
+      error_count: 4,
+      has_root: true,
+      orphan_count: 0,
+      root_operation: 'root',
+    });
     expect(row!.services).toHaveLength(9);
   });
 
@@ -219,14 +280,24 @@ describe('POST /v1/traces → PostgreSQL', () => {
             startMs: 0,
             durationMs: 10,
             statusCode: 2,
-            events: [{ name: 'exception', atMs: 5, attributes: { 'exception.type': 'Error', 'exception.message': 'kaput' } }],
+            events: [
+              {
+                name: 'exception',
+                atMs: 5,
+                attributes: { 'exception.type': 'Error', 'exception.message': 'kaput' },
+              },
+            ],
           },
         ],
       }),
     );
-    const [span] = await db.sql`select events, status_code, is_error from spans where trace_id = ${traceId}`;
+    const [span] =
+      await db.sql`select events, status_code, is_error from spans where trace_id = ${traceId}`;
     expect(span!.status_code).toBe(2);
-    expect(span!.events[0]).toMatchObject({ name: 'exception', attributes: { 'exception.message': 'kaput' } });
+    expect(span!.events[0]).toMatchObject({
+      name: 'exception',
+      attributes: { 'exception.message': 'kaput' },
+    });
   });
 });
 

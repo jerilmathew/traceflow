@@ -6,7 +6,11 @@ const schema = z.object({
   COLLECTOR_HOST: z.string().default('127.0.0.1'),
   COLLECTOR_PORT: z.coerce.number().int().min(1).max(65535).default(4318),
   /** Max request body, after gzip decompression. */
-  COLLECTOR_BODY_LIMIT_BYTES: z.coerce.number().int().positive().default(8 * 1024 * 1024),
+  COLLECTOR_BODY_LIMIT_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8 * 1024 * 1024),
   CORS_ORIGINS: z.string().default('http://localhost:5180,http://127.0.0.1:5180'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });

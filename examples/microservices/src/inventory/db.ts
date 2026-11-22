@@ -1,11 +1,12 @@
 import { createRequire } from 'node:module';
+import type * as Pg from 'pg';
 import type { Pool as PgPool } from 'pg';
 import { INVENTORY_DATABASE_URL } from '../common/config';
 
 // pg is a CommonJS package; loading it through `require` guarantees the
 // OpenTelemetry pg instrumentation (require-in-the-middle) patches it.
 const require = createRequire(import.meta.url);
-const { Pool } = require('pg') as typeof import('pg');
+const { Pool } = require('pg') as typeof Pg;
 
 export const pool: PgPool = new Pool({ connectionString: INVENTORY_DATABASE_URL, max: 10 });
 

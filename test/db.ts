@@ -1,7 +1,8 @@
 import { createDb, type DbHandle } from '../packages/db/src/client';
 
 export function testDb(): DbHandle {
-  const url = process.env.TEST_DATABASE_URL ?? 'postgres://traceflow:traceflow@127.0.0.1:5544/traceflow_test';
+  const url =
+    process.env.TEST_DATABASE_URL ?? 'postgres://traceflow:traceflow@127.0.0.1:5544/traceflow_test';
   return createDb({ url, max: 20, applicationName: 'traceflow-tests' });
 }
 

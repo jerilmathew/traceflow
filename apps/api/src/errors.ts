@@ -13,7 +13,13 @@ export class ApiError extends Error {
   }
 
   toBody(): ApiErrorBody {
-    return { error: { code: this.code, message: this.message, ...(this.details !== undefined ? { details: this.details } : {}) } };
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        ...(this.details !== undefined ? { details: this.details } : {}),
+      },
+    };
   }
 }
 

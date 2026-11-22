@@ -61,7 +61,10 @@ export const traces = pgTable(
     spanCount: integer('span_count').notNull(),
     errorCount: integer('error_count').notNull(),
     orphanCount: integer('orphan_count').notNull().default(0),
-    services: text('services').array().notNull().default(sql`'{}'::text[]`),
+    services: text('services')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -12,7 +12,8 @@ export const INVENTORY_URL = process.env.INVENTORY_URL ?? `http://${HOST}:${INVE
 
 /** The Inventory service's own application database (not TraceFlow's). */
 export const INVENTORY_DATABASE_URL =
-  process.env.INVENTORY_DATABASE_URL ?? 'postgres://traceflow:traceflow@127.0.0.1:5544/inventory_demo';
+  process.env.INVENTORY_DATABASE_URL ??
+  'postgres://traceflow:traceflow@127.0.0.1:5544/inventory_demo';
 
 /** Artificial latency of the cold-storage availability query (Scenario B). */
 export const COLD_STORAGE_DELAY_MS = port('COLD_STORAGE_DELAY_MS', 450);

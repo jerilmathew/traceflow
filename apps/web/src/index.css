@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+/*
+ * TraceFlow design tokens. Dark-first: near-black canvas, charcoal panels,
+ * hairline borders and restrained violet / blue / cyan accents.
+ * Status colors are reserved for state and always ship with an icon + label.
+ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-canvas: #09090b;
+  --color-panel: #0f0f13;
+  --color-raised: #15151b;
+  --color-hover: #1b1b23;
+  --color-line: #23232c;
+  --color-line-strong: #30303c;
+
+  --color-ink: #ececf1;
+  --color-ink-2: #a3a3b2;
+  --color-ink-3: #6f6f80;
+
+  --color-accent: #9085e9;
+  --color-accent-strong: #a69cf0;
+  --color-blue: #3987e5;
+  --color-cyan: #22b8cf;
+
+  --color-ok: #30a46c;
+  --color-warn: #f5a524;
+  --color-err: #e5484d;
+  --color-err-soft: #e5484d1f;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-flash: flash 1.6s ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes flash {
+    from {
+      background-color: color-mix(in oklab, var(--color-accent) 14%, transparent);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+}
+
+/* Thin, unobtrusive scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* React Flow theming */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--color-line-strong);
+  --xy-controls-button-background-color: var(--color-raised);
+  --xy-controls-button-background-color-hover: var(--color-hover);
+  --xy-controls-button-color: var(--color-ink-2);
+  --xy-controls-button-border-color: var(--color-line);
+  --xy-attribution-background-color: transparent;
+}

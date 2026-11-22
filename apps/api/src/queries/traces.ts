@@ -28,7 +28,10 @@ const SORT_COLUMNS: Record<TraceSearch['sort'], string> = {
 /** Escape LIKE metacharacters so user input is matched literally. */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 
-export async function searchTraces(sql: Sql, search: TraceSearch): Promise<Paginated<TraceSummary>> {
+export async function searchTraces(
+  sql: Sql,
+  search: TraceSearch,
+): Promise<Paginated<TraceSummary>> {
   // Every user-provided value below is a bound parameter; only fragments we
   // construct ourselves (and a whitelisted identifier) are spliced in.
   const conditions = [];
@@ -36,7 +39,9 @@ export async function searchTraces(sql: Sql, search: TraceSearch): Promise<Pagin
     const q = search.q.trim();
     if (/^[0-9a-f]{4,32}$/i.test(q)) {
       // Looks like (part of) a trace id → prefix match on the primary key.
-      conditions.push(sql`(trace_id like ${`${escapeLike(q.toLowerCase())}%`} or root_operation ilike ${`%${escapeLike(q)}%`})`);
+      conditions.push(
+        sql`(trace_id like ${`${escapeLike(q.toLowerCase())}%`} or root_operation ilike ${`%${escapeLike(q)}%`})`,
+      );
     } else {
       const pattern = `%${escapeLike(q)}%`;
       conditions.push(sql`(root_operation ilike ${pattern} or root_service ilike ${pattern})`);
@@ -45,13 +50,18 @@ export async function searchTraces(sql: Sql, search: TraceSearch): Promise<Pagin
   // services @> array[...] can use the GIN index on traces.services.
   if (search.service) conditions.push(sql`services @> array[${search.service}]::text[]`);
   if (search.status) conditions.push(sql`status = ${search.status}`);
-  if (search.minDurationMs !== undefined) conditions.push(sql`duration_ms >= ${search.minDurationMs}`);
-  if (search.maxDurationMs !== undefined) conditions.push(sql`duration_ms <= ${search.maxDurationMs}`);
+  if (search.minDurationMs !== undefined)
+    conditions.push(sql`duration_ms >= ${search.minDurationMs}`);
+  if (search.maxDurationMs !== undefined)
+    conditions.push(sql`duration_ms <= ${search.maxDurationMs}`);
   if (search.from) conditions.push(sql`start_time >= ${search.from}`);
   if (search.to) conditions.push(sql`start_time <= ${search.to}`);
 
   const where = conditions.length
-    ? conditions.reduce((acc, cond, i) => (i === 0 ? sql`where ${cond}` : sql`${acc} and ${cond}`), sql``)
+    ? conditions.reduce(
+        (acc, cond, i) => (i === 0 ? sql`where ${cond}` : sql`${acc} and ${cond}`),
+        sql``,
+      )
     : sql``;
   const column = sql(SORT_COLUMNS[search.sort]);
   const direction = search.order === 'asc' ? sql`asc` : sql`desc`;
@@ -102,7 +112,10 @@ export async function getTraceDetail(sql: Sql, traceId: string): Promise<TraceDe
   };
 }
 
-export async function getTraceSummaries(sql: Sql, traceIds: readonly string[]): Promise<TraceSummary[]> {
+export async function getTraceSummaries(
+  sql: Sql,
+  traceIds: readonly string[],
+): Promise<TraceSummary[]> {
   if (traceIds.length === 0) return [];
   const rows = (await sql`
     select ${sql.unsafe(TRACE_COLUMNS)} from traces
@@ -112,7 +125,11 @@ export async function getTraceSummaries(sql: Sql, traceIds: readonly string[]): 
   return rows.map(toTraceSummary);
 }
 
-export async function recentTraces(sql: Sql, limit: number, service?: string): Promise<TraceSummary[]> {
+export async function recentTraces(
+  sql: Sql,
+  limit: number,
+  service?: string,
+): Promise<TraceSummary[]> {
   const rows = (await sql`
     select ${sql.unsafe(TRACE_COLUMNS)} from traces
     ${service ? sql`where services @> array[${service}]::text[]` : sql``}

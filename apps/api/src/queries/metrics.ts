@@ -97,7 +97,9 @@ async function timeseries(
             percentile_cont(0.95) within group (order by e.duration_ms) as p95
           from b left join e on e.start_time >= b.ts and e.start_time < b.ts + ${bucket}
           group by b.ts order by b.ts`;
-  return (rows as unknown as Array<{ ts: Date; count: number; errors: number; p95: number | null }>).map((r) => ({
+  return (
+    rows as unknown as Array<{ ts: Date; count: number; errors: number; p95: number | null }>
+  ).map((r) => ({
     ts: r.ts.toISOString(),
     count: r.count,
     errors: r.errors,
@@ -105,7 +107,11 @@ async function timeseries(
   }));
 }
 
-export async function listServices(sql: Sql, range: WindowRange, onlyName?: string): Promise<ServiceSummary[]> {
+export async function listServices(
+  sql: Sql,
+  range: WindowRange,
+  onlyName?: string,
+): Promise<ServiceSummary[]> {
   const rows = (await sql`
     with active as (
       select distinct s.service_id from spans s where s.start_time >= ${range.from}
@@ -170,7 +176,16 @@ export async function getOverview(sql: Sql, range: WindowRange): Promise<Overvie
         percentile_cont(0.99) within group (order by duration_ms) as p99
       from traces where start_time >= ${range.from}
     ` as unknown as Promise<
-      [{ trace_count: number; span_count: number; error_count: number; p50: number | null; p95: number | null; p99: number | null }]
+      [
+        {
+          trace_count: number;
+          span_count: number;
+          error_count: number;
+          p50: number | null;
+          p95: number | null;
+          p99: number | null;
+        },
+      ]
     >,
     sql`
       select count(distinct sv.name)::int as service_count

@@ -72,7 +72,9 @@ describe('parseExportTraceServiceRequest — real OpenTelemetry JS exporter payl
 
 describe('id normalization', () => {
   it('lowercases hex ids', () => {
-    expect(normalizeId('4BF92F3577B34DA6A3CE929D0E0E4736', 16)).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+    expect(normalizeId('4BF92F3577B34DA6A3CE929D0E0E4736', 16)).toBe(
+      '4bf92f3577b34da6a3ce929d0e0e4736',
+    );
   });
 
   it('accepts base64-encoded ids (proto3 JSON mapping)', () => {
@@ -80,7 +82,9 @@ describe('id normalization', () => {
     const b64 = Buffer.from(hex, 'hex').toString('base64');
     expect(b64).toHaveLength(24);
     expect(normalizeId(b64, 16)).toBe(hex);
-    expect(normalizeId(Buffer.from('00f067aa0ba902b7', 'hex').toString('base64'), 8)).toBe('00f067aa0ba902b7');
+    expect(normalizeId(Buffer.from('00f067aa0ba902b7', 'hex').toString('base64'), 8)).toBe(
+      '00f067aa0ba902b7',
+    );
   });
 
   it('treats empty ids as absent and rejects garbage', () => {
@@ -96,7 +100,9 @@ describe('uint64 parsing', () => {
     expect(parseUint64('1795140782173000000', 't')).toBe(1795140782173000000n);
     expect(parseUint64(42, 't')).toBe(42n);
     const value = 1795140782173000000n;
-    expect(parseUint64({ low: Number(value & 0xffffffffn), high: Number(value >> 32n) }, 't')).toBe(value);
+    expect(parseUint64({ low: Number(value & 0xffffffffn), high: Number(value >> 32n) }, 't')).toBe(
+      value,
+    );
   });
 
   it('rejects negatives, floats and junk', () => {
@@ -115,14 +121,20 @@ describe('attribute values', () => {
   it('flattens kvlist values and nested arrays', () => {
     expect(
       parseAnyValue({
-        kvlistValue: { values: [{ key: 'a', value: { arrayValue: { values: [{ intValue: 1 }, { boolValue: true }] } } }] },
+        kvlistValue: {
+          values: [
+            { key: 'a', value: { arrayValue: { values: [{ intValue: 1 }, { boolValue: true }] } } },
+          ],
+        },
       }),
     ).toEqual({ a: [1, true] });
   });
 
   it('strips NUL characters and truncates huge strings', () => {
     expect(parseAnyValue({ stringValue: 'a\u0000b' })).toBe('ab');
-    const long = parseAnyValue({ stringValue: 'x'.repeat(LIMITS.maxAttributeValueLength + 100) }) as string;
+    const long = parseAnyValue({
+      stringValue: 'x'.repeat(LIMITS.maxAttributeValueLength + 100),
+    }) as string;
     expect(long.startsWith('x'.repeat(LIMITS.maxAttributeValueLength))).toBe(true);
     expect(long).toContain('[truncated 100 chars]');
   });
@@ -188,7 +200,19 @@ describe('validation and partial success', () => {
 
   it('falls back to unknown_service when service.name is missing', () => {
     const result = parseExportTraceServiceRequest({
-      resourceSpans: [{ scopeSpans: [{ spans: [otlpPayload({ s: [{ traceId, spanId: randomSpanId(), name: 'n', startMs: 0, durationMs: 1 }] }).resourceSpans[0]!.scopeSpans[0]!.spans[0]] }] }],
+      resourceSpans: [
+        {
+          scopeSpans: [
+            {
+              spans: [
+                otlpPayload({
+                  s: [{ traceId, spanId: randomSpanId(), name: 'n', startMs: 0, durationMs: 1 }],
+                }).resourceSpans[0]!.scopeSpans[0]!.spans[0],
+              ],
+            },
+          ],
+        },
+      ],
     });
     expect(result.spans[0]!.serviceName).toBe('unknown_service');
   });
@@ -211,11 +235,15 @@ describe('validation and partial success', () => {
       startMs: 0,
       durationMs: 1,
     }));
-    expect(() => parseExportTraceServiceRequest(otlpPayload({ svc: many }))).toThrow(/more than 10000 spans/);
+    expect(() => parseExportTraceServiceRequest(otlpPayload({ svc: many }))).toThrow(
+      /more than 10000 spans/,
+    );
   });
 
   it('drops prototype-polluting attribute keys', () => {
-    const payload = otlpPayload({ svc: [{ traceId, spanId: randomSpanId(), name: 'p', startMs: 0, durationMs: 1 }] });
+    const payload = otlpPayload({
+      svc: [{ traceId, spanId: randomSpanId(), name: 'p', startMs: 0, durationMs: 1 }],
+    });
     const span = payload.resourceSpans[0]!.scopeSpans[0]!.spans[0] as { attributes: unknown[] };
     span.attributes = [
       { key: '__proto__', value: { stringValue: 'polluted' } },
@@ -228,9 +256,14 @@ describe('validation and partial success', () => {
   });
 
   it('limits attributes per span', () => {
-    const payload = otlpPayload({ svc: [{ traceId, spanId: randomSpanId(), name: 'p', startMs: 0, durationMs: 1 }] });
+    const payload = otlpPayload({
+      svc: [{ traceId, spanId: randomSpanId(), name: 'p', startMs: 0, durationMs: 1 }],
+    });
     const span = payload.resourceSpans[0]!.scopeSpans[0]!.spans[0] as { attributes: unknown[] };
-    span.attributes = Array.from({ length: 200 }, (_, i) => ({ key: `k${i}`, value: { intValue: i } }));
+    span.attributes = Array.from({ length: 200 }, (_, i) => ({
+      key: `k${i}`,
+      value: { intValue: i },
+    }));
     const [parsed] = parseExportTraceServiceRequest(payload).spans;
     expect(Object.keys(parsed!.attributes)).toHaveLength(LIMITS.maxAttributesPerSpan);
     expect(parsed!.droppedCount).toBe(200 - LIMITS.maxAttributesPerSpan);
@@ -238,7 +271,9 @@ describe('validation and partial success', () => {
 });
 
 describe('error classification', () => {
-  const base = { events: [] as Array<{ name: string; timeUnixNano: string; attributes: Record<string, never> }> };
+  const base = {
+    events: [] as Array<{ name: string; timeUnixNano: string; attributes: Record<string, never> }>,
+  };
   it('uses span status as the source of truth', () => {
     expect(isErrorSpan({ ...base, statusCode: 2 })).toBe(true);
     expect(isErrorSpan({ ...base, statusCode: 1 })).toBe(false);
@@ -246,7 +281,9 @@ describe('error classification', () => {
   });
 
   it('treats an escaped exception on an UNSET span as an error, but OK always wins', () => {
-    const events = [{ name: 'exception', timeUnixNano: '1', attributes: { 'exception.escaped': true } }];
+    const events = [
+      { name: 'exception', timeUnixNano: '1', attributes: { 'exception.escaped': true } },
+    ];
     expect(isErrorSpan({ statusCode: 0, events: events as never })).toBe(true);
     expect(isErrorSpan({ statusCode: 1, events: events as never })).toBe(false);
     const handled = [{ name: 'exception', timeUnixNano: '1', attributes: {} }];
