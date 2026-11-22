@@ -1,5 +1,7 @@
 # TraceFlow
 
+[![CI](https://github.com/jerilmathew3-web/traceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/jerilmathew3-web/traceflow/actions/workflows/ci.yml)
+
 **A lightweight distributed tracing backend and dashboard, built from scratch on OpenTelemetry.**
 
 TraceFlow receives real OpenTelemetry traces over OTLP/HTTP, stores them in
