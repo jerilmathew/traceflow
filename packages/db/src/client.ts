@@ -1,15 +1,19 @@
-import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './schema';
 
 export const DEFAULT_DATABASE_URL = 'postgres://traceflow:traceflow@127.0.0.1:5544/traceflow';
 
-export type Database = PostgresJsDatabase<typeof schema>;
 export type Sql = postgres.Sql;
 
+/**
+ * Drizzle owns the schema definition and migrations (src/schema.ts, ./drizzle).
+ * Runtime queries are hand-written, parameterised SQL through postgres.js
+ * tagged templates: the analytical queries (percentile_cont, date_bin,
+ * self-joins, advisory locks) read more clearly as SQL than through a query
+ * builder. Note that `drizzle(client)` replaces the client's type serializers,
+ * so the runtime client is deliberately *not* shared with a Drizzle instance.
+ */
 export interface DbHandle {
   sql: Sql;
-  db: Database;
   close: () => Promise<void>;
 }
 
@@ -32,8 +36,7 @@ export function createDb(options: CreateDbOptions = {}): DbHandle {
     connection: { application_name: options.applicationName ?? 'traceflow' },
     onnotice: () => {},
   });
-  const db = drizzle(sql, { schema });
-  return { sql, db, close: () => sql.end({ timeout: 5 }) };
+  return { sql, close: () => sql.end({ timeout: 5 }) };
 }
 
 /** Lightweight connectivity probe used by health endpoints. */

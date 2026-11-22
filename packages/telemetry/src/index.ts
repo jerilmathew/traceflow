@@ -55,10 +55,20 @@ export function startTelemetry(options: TelemetryOptions): NodeSDK {
   const exporter = new OTLPTraceExporter({ url: endpoint, timeoutMillis: 5_000 });
 
   sdk = new NodeSDK({
+    // Host/process detectors would attach the machine's hostname, user paths
+    // and command line to every span. The demo declares an explicit, minimal
+    // resource instead, so nothing machine-identifying ends up in screenshots.
+    autoDetectResources: false,
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: options.serviceName,
       [ATTR_SERVICE_VERSION]: options.serviceVersion ?? '0.1.0',
       'deployment.environment.name': options.environment ?? process.env.DEPLOY_ENV ?? 'demo',
+      'process.runtime.name': 'nodejs',
+      'process.runtime.version': process.versions.node,
+      'process.pid': process.pid,
+      'host.arch': process.arch,
+      'telemetry.sdk.language': 'nodejs',
+      'telemetry.sdk.name': 'opentelemetry',
     }),
     // Small batches and a short delay keep the demo feeling "live".
     spanProcessors: [

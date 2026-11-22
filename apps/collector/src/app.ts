@@ -1,7 +1,7 @@
 import { Transform, type Readable } from 'node:stream';
 import { createGunzip, createInflate } from 'node:zlib';
 import cors from '@fastify/cors';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import { pingDb, type Sql } from '@traceflow/db';
 import { ingestSpans } from './ingest';
 import { PayloadError, parseExportTraceServiceRequest } from './otlp/parse';
@@ -57,7 +57,9 @@ export async function buildCollector(options: CollectorOptions): Promise<Fastify
       // Never log request bodies (telemetry may contain user data) or auth headers.
       redact: ['req.headers.authorization', 'req.headers.cookie'],
     },
-    disableRequestLogging: true,
+    // Per-request access logs would fire for every export batch; we log a
+    // single structured line per ingest instead.
+    logController: new LogController({ disableRequestLogging: true }),
   });
 
   await app.register(cors, {

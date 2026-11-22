@@ -83,14 +83,14 @@ export async function ingestSpans(sql: Sql, spans: readonly NormalizedSpan[]): P
     await tx`
       insert into services (name, environment)
       select x.name, x.environment
-      from jsonb_to_recordset(${JSON.stringify(services)}::jsonb) as x(name text, environment text)
+      from jsonb_to_recordset(${JSON.stringify(services)}::text::jsonb) as x(name text, environment text)
       on conflict (name, environment) do update set last_seen_at = now()
     `;
 
     // Serialise work per trace (see note 3). Ordered to rule out deadlocks.
     await tx`
       select pg_advisory_xact_lock(k)
-      from (select distinct hashtextextended(t, 7411) as k from jsonb_array_elements_text(${JSON.stringify(traceIds)}::jsonb) as t order by k) as locks
+      from (select distinct hashtextextended(t, 7411) as k from jsonb_array_elements_text(${JSON.stringify(traceIds)}::text::jsonb) as t order by k) as locks
     `;
 
     // One statement, one JSON parameter: avoids the 65,535 bind-parameter
@@ -109,7 +109,7 @@ export async function ingestSpans(sql: Sql, spans: readonly NormalizedSpan[]): P
         x.status_code, x.status_message, x.is_error,
         coalesce(x.attributes, '{}'), coalesce(x.resource_attributes, '{}'),
         coalesce(x.events, '[]'), coalesce(x.links, '[]'), x.scope_name
-      from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as x(
+      from jsonb_to_recordset(${JSON.stringify(rows)}::text::jsonb) as x(
         trace_id text, span_id text, parent_span_id text, service_name text, environment text,
         operation_name text, kind smallint, start_unix_nano text, end_unix_nano text,
         duration_ms float8, status_code smallint, status_message text, is_error boolean,
@@ -151,7 +151,7 @@ export async function recomputeTraceSummaries(sql: Sql, traceIds: readonly strin
   await sql`
     with affected as (
       select distinct t::char(32) as trace_id
-      from jsonb_array_elements_text(${JSON.stringify(traceIds)}::jsonb) as t
+      from jsonb_array_elements_text(${JSON.stringify(traceIds)}::text::jsonb) as t
     ),
     s as (
       select sp.*, sv.name as service_name,
