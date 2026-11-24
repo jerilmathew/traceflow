@@ -23,6 +23,8 @@ export interface CreateDbOptions {
   max?: number;
   /** Application name visible in pg_stat_activity. */
   applicationName?: string;
+  /** Abort any query running longer than this (0 = no limit). */
+  statementTimeoutMs?: number;
 }
 
 export function createDb(options: CreateDbOptions = {}): DbHandle {
@@ -33,7 +35,10 @@ export function createDb(options: CreateDbOptions = {}): DbHandle {
     connect_timeout: 5,
     // bigint columns come back as JS BigInt instead of lossy numbers / strings.
     types: { bigint: postgres.BigInt },
-    connection: { application_name: options.applicationName ?? 'traceflow' },
+    connection: {
+      application_name: options.applicationName ?? 'traceflow',
+      ...(options.statementTimeoutMs ? { statement_timeout: options.statementTimeoutMs } : {}),
+    },
     onnotice: () => {},
   });
   return { sql, close: () => sql.end({ timeout: 5 }) };

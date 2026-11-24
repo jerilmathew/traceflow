@@ -18,18 +18,24 @@ import type { LiveEvent, LiveHub } from '../live';
 const HEARTBEAT_MS = 15_000;
 const MAX_BUFFERED_BYTES = 1024 * 1024;
 const MAX_CLIENTS = 100;
+/** Stops one visitor from using up every live connection. */
+const MAX_CLIENTS_PER_IP = 6;
 
 export function registerStream(app: FastifyInstance, live: LiveHub): void {
   let clients = 0;
+  const perIp = new Map<string, number>();
 
   app.get('/api/stream', (request, reply) => {
-    if (clients >= MAX_CLIENTS) {
+    const ip = request.ip;
+    const fromIp = perIp.get(ip) ?? 0;
+    if (clients >= MAX_CLIENTS || fromIp >= MAX_CLIENTS_PER_IP) {
       void reply
         .status(503)
         .send({ error: { code: 'too_many_streams', message: 'too many live connections' } });
       return;
     }
     clients++;
+    perIp.set(ip, fromIp + 1);
 
     // Take over the raw socket: Fastify must not try to serialize a reply.
     reply.hijack();
@@ -75,6 +81,9 @@ export function registerStream(app: FastifyInstance, live: LiveHub): void {
       if (closed) return;
       closed = true;
       clients--;
+      const left = (perIp.get(ip) ?? 1) - 1;
+      if (left > 0) perIp.set(ip, left);
+      else perIp.delete(ip);
       clearInterval(heartbeat);
       unsubscribe();
     }

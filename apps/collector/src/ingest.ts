@@ -30,6 +30,8 @@
 import type { Sql } from '@traceflow/db';
 import { isErrorSpan, type NormalizedSpan } from './otlp/parse';
 
+/** Seed for the per-trace advisory lock; shared with the retention sweep. */
+export const TRACE_LOCK_SEED = 7411;
 export const NOTIFY_CHANNEL = 'traceflow_ingest';
 /** NOTIFY payloads are limited to 8000 bytes; 32 hex ids + quotes ≈ 35 bytes each. */
 const MAX_NOTIFY_TRACE_IDS = 150;
@@ -102,7 +104,7 @@ export async function ingestSpans(
     // Serialise work per trace (see note 3). Ordered to rule out deadlocks.
     await tx`
       select pg_advisory_xact_lock(k)
-      from (select distinct hashtextextended(t, 7411) as k from jsonb_array_elements_text(${JSON.stringify(traceIds)}::text::jsonb) as t order by k) as locks
+      from (select distinct hashtextextended(t, ${TRACE_LOCK_SEED}::bigint) as k from jsonb_array_elements_text(${JSON.stringify(traceIds)}::text::jsonb) as t order by k) as locks
     `;
 
     // One statement, one JSON parameter: avoids the 65,535 bind-parameter

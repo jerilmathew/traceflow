@@ -12,6 +12,8 @@ const schema = z.object({
     .positive()
     .default(8 * 1024 * 1024),
   CORS_ORIGINS: z.string().default('http://localhost:5180,http://127.0.0.1:5180'),
+  /** Delete traces that ended more than this many hours ago (0 keeps everything). */
+  RETENTION_HOURS: z.coerce.number().min(0).default(0),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

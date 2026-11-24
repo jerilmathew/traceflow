@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * End-to-end tests run a fully isolated TraceFlow stack on non-default ports
- * against the `traceflow_e2e` database, so they never touch dev data:
+ * against the `traceflow_e2e` database, so they never touch stored dev telemetry.
+ * (The demo Inventory service still uses the shared `inventory_demo` database.)
  *
  *   demo services (18101-18103) ──OTLP/JSON──▶ collector :14318 ──▶ Postgres
  *   browser ──▶ vite :15180 ──/api proxy──▶ API :14400 ──▶ Postgres

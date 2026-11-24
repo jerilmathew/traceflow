@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { parse as parseYaml } from 'yaml';
@@ -21,6 +22,10 @@ export interface ApiOptions {
   serveWeb?: boolean;
   /** Start LISTEN for live updates (disable in tests that don't need it). */
   live?: boolean;
+  /** Requests per minute per client IP; 0 or undefined disables limiting. */
+  rateLimitPerMinute?: number;
+  /** Proxy IPs/CIDRs whose X-Forwarded-For is honoured; empty trusts none. */
+  trustProxy?: string;
 }
 
 export async function buildApi(options: ApiOptions): Promise<FastifyInstance & { live: LiveHub }> {
@@ -31,6 +36,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance & {
     },
     // Trace ids, service names etc. arrive in the URL; keep it bounded.
     routerOptions: { maxParamLength: 300 },
+    trustProxy: options.trustProxy || false,
+  });
+
+  // Telemetry is untrusted input, so keep a strict policy behind React's escaping.
+  // Inline styles are allowed because bars are positioned with style attributes.
+  app.addHook('onRequest', async (_request, reply) => {
+    void reply.headers({
+      'content-security-policy':
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+    });
   });
 
   await app.register(cors, {
@@ -58,9 +75,14 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance & {
             : { error: { code: 'internal_error', message: 'internal server error' } },
         );
       }
-      return reply.status(status).send({ error: { code: 'bad_request', message: error.message } });
+      const code = status === 429 ? 'rate_limited' : 'bad_request';
+      return reply.status(status).send({ error: { code, message: error.message } });
     },
   );
+
+  if (options.rateLimitPerMinute) {
+    await app.register(rateLimit, { max: options.rateLimitPerMinute, timeWindow: '1 minute' });
+  }
 
   const live = new LiveHub(options.sql, app.log);
   if (options.live !== false) {

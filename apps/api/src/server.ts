@@ -3,7 +3,11 @@ import { buildApi } from './app';
 import { loadConfig } from './config';
 
 const config = loadConfig();
-const { sql, close } = createDb({ url: config.DATABASE_URL, applicationName: 'traceflow-api' });
+const { sql, close } = createDb({
+  url: config.DATABASE_URL,
+  applicationName: 'traceflow-api',
+  statementTimeoutMs: config.API_STATEMENT_TIMEOUT_MS,
+});
 const app = await buildApi({
   sql,
   corsOrigins: config.CORS_ORIGINS.split(',')
@@ -11,6 +15,8 @@ const app = await buildApi({
     .filter(Boolean),
   logLevel: config.LOG_LEVEL,
   serveWeb: config.SERVE_WEB,
+  rateLimitPerMinute: config.RATE_LIMIT_PER_MINUTE,
+  trustProxy: config.TRUST_PROXY,
 });
 
 const shutdown = async (signal: string) => {
