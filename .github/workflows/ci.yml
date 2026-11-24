@@ -77,3 +77,45 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+
+  container:
+    name: Public demo container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build image
+        run: docker build -t traceflow .
+
+      - name: Start with PostgreSQL in 256 MB
+        run: |
+          docker network create demo
+          docker run -d --name db --network demo -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=app postgres:17-alpine
+          docker run -d --name app --network demo -p 127.0.0.1:8080:8080 \
+            --memory 256m --memory-swap 256m --read-only --tmpfs /tmp --cap-drop ALL \
+            -e DATABASE_URL=postgres://postgres:ci@db:5432/app traceflow
+          timeout 90 sh -c 'until docker logs app 2>&1 | grep -q "public demo ready"; do sleep 1; done'
+          sleep 40
+
+      - name: Verify from outside
+        run: pnpm verify:deployment http://127.0.0.1:8080
+
+      - name: Only the dashboard port is reachable
+        run: |
+          for port in 4318 8101 8102 8103; do
+            if docker run --rm --network demo postgres:17-alpine nc -z -w 2 app $port; then
+              echo "port $port is reachable"; exit 1
+            fi
+          done
+          docker stats --no-stream app db
+
+      - name: Container logs
+        if: failure()
+        run: docker logs app

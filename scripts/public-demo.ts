@@ -2,12 +2,19 @@
  * Runs the whole public demo in one container. Only the API/dashboard listens
  * on a public interface; the collector and demo services bind to 127.0.0.1 so
  * nobody outside the container can write telemetry. If any process dies the
- * container exits and the host restarts it.
+ * container exits and the host restarts it. Runs from the output of
+ * build-public-demo.ts (plain JavaScript, no TypeScript loader at runtime).
  */
 import { spawn, type ChildProcess } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { GATEWAY_URL } from '../examples/microservices/src/common/config';
+import { SCENARIOS, runScenario } from '../examples/microservices/src/scripts/scenarios-def';
+import { runTraffic } from '../examples/microservices/src/scripts/traffic-lib';
 import { createDb, redactUrl } from '../packages/db/src/client';
 import { runMigrations } from '../packages/db/src/migrate';
 
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) throw new Error('DATABASE_URL is required');
 
@@ -32,11 +39,12 @@ async function prepareDatabases(url: string): Promise<void> {
   } finally {
     await close();
   }
-  await runMigrations(url);
+  await runMigrations(url, path.join(ROOT, 'drizzle'));
 }
 
 const env: NodeJS.ProcessEnv = {
   ...process.env,
+  TRACEFLOW_ROOT: ROOT,
   INVENTORY_DATABASE_URL: inventoryUrl.toString(),
   API_HOST: '0.0.0.0',
   API_PORT: process.env.PORT ?? '8080',
@@ -47,6 +55,8 @@ const env: NodeJS.ProcessEnv = {
   CORS_ORIGINS: '',
   DEPLOY_ENV: 'public-demo',
   RETENTION_HOURS: process.env.RETENTION_HOURS ?? '24',
+  PUBLIC_DEMO: 'true',
+  GLOBAL_RATE_LIMIT_PER_MINUTE: process.env.GLOBAL_RATE_LIMIT_PER_MINUTE ?? '3000',
   RATE_LIMIT_PER_MINUTE: process.env.RATE_LIMIT_PER_MINUTE ?? '300',
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'warn',
 };
@@ -59,15 +69,21 @@ function stop(code: number): void {
   for (const child of children) child.kill('SIGTERM');
   setTimeout(() => process.exit(code), 3_000);
 }
-function start(name: string, cwd: string, ...args: string[]): void {
-  const child = spawn(process.execPath, ['--import', 'tsx', ...args], {
-    cwd,
-    env,
-    stdio: 'inherit',
-  });
-  child.on('exit', (code) => {
+function start(name: string, dir: string, ...preload: string[]): void {
+  const child = spawn(
+    process.execPath,
+    [
+      // Small heaps: each process does little work and the container is memory-billed.
+      '--max-old-space-size=96',
+      '--max-semi-space-size=1',
+      ...preload.flatMap((file) => ['--import', `./${dir}/${file}`]),
+      `${dir}/server.js`,
+    ],
+    { cwd: ROOT, env, stdio: 'inherit' },
+  );
+  child.on('exit', (code, signal) => {
     if (stopping) return;
-    console.error(`${name} exited with code ${code}; stopping`);
+    console.error(`${name} exited (${signal ?? `code ${code}`}); stopping`);
     stop(1);
   });
   children.push(child);
@@ -88,22 +104,32 @@ process.once('SIGINT', () => stop(0));
 
 try {
   await prepareDatabases(DATABASE_URL);
-  start('collector', 'apps/collector', 'src/server.ts');
+  start('collector', 'apps/collector/src');
   await healthy('http://127.0.0.1:4318/health');
-  start('api', 'apps/api', 'src/server.ts');
+  start('api', 'apps/api/src');
   await healthy(`http://127.0.0.1:${env.API_PORT}/api/health`);
-  start('demo services', 'examples/microservices', 'src/run-all.ts');
-  await healthy('http://127.0.0.1:8101/health');
-  start(
-    'traffic',
-    'examples/microservices',
-    'src/scripts/traffic.ts',
-    '--duration',
-    'Infinity',
-    '--rps',
-    process.env.DEMO_RPS ?? '0.05',
-  );
+  for (const [name, port] of [
+    ['users', 8102],
+    ['inventory', 8103],
+    ['gateway', 8101],
+  ] as const) {
+    start(name, `examples/microservices/src/${name}`, 'instrument.js');
+    await healthy(`http://127.0.0.1:${port}/health`);
+  }
   console.log(`public demo ready on port ${env.API_PORT} (db ${redactUrl(DATABASE_URL)})`);
+
+  const shouldStop = () => stopping;
+  const overview = (await (
+    await fetch(`http://127.0.0.1:${env.API_PORT}/api/overview?window=1h`)
+  ).json()) as { traceCount: number };
+  // A visitor should never meet an empty dashboard after a fresh start.
+  if (overview.traceCount < 60) {
+    // One of each scenario first, so slow and failed requests are always represented.
+    for (const scenario of SCENARIOS) await runScenario(GATEWAY_URL, scenario);
+    await runTraffic({ durationS: 30, rps: 4, seed: 7, shouldStop });
+  }
+  const rps = Number(process.env.DEMO_RPS ?? '0.05');
+  await runTraffic({ durationS: Infinity, rps, seed: Date.now(), shouldStop });
 } catch (error) {
   console.error('startup failed:', (error as Error).message);
   stop(1);

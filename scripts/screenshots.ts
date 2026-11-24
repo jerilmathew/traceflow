@@ -28,7 +28,7 @@ async function findTrace(query: string): Promise<TraceSummary> {
   return trace;
 }
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL });
 const page = await browser.newPage({
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 2,
@@ -70,5 +70,8 @@ await shot('trace-error', `/traces/${failed.traceId}`, async () => {
 });
 await shot('service-map', '/map?window=15m');
 await shot('service-detail', '/services/inventory-service?window=15m');
+
+await page.setViewportSize({ width: 390, height: 1000 });
+await shot('trace-mobile', `/traces/${slow.traceId}`);
 
 await browser.close();

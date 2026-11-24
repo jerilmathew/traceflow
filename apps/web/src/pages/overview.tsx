@@ -13,6 +13,7 @@ import {
   StatTile,
   WindowSelect,
 } from '@/components/common';
+import { useDemo } from '@/components/demo-notice';
 import { TraceTable } from '@/components/trace-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLive } from '@/hooks/use-live';
@@ -22,6 +23,14 @@ import { serviceColor } from '@/lib/colors';
 import { formatCount } from '@/lib/utils';
 
 export function GettingStarted() {
+  const demo = useDemo();
+  if (demo) {
+    return (
+      <EmptyState title="Waiting for the next demo request">
+        The demo services handle a request every few seconds; traces appear here automatically.
+      </EmptyState>
+    );
+  }
   return (
     <EmptyState title="No traces in this window yet" icon={<Terminal className="size-4" />}>
       <p>Start the instrumented demo services and send some requests:</p>

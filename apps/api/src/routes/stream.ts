@@ -12,7 +12,7 @@
  * socket buffer grows past 1 MiB are disconnected rather than buffered
  * indefinitely, so a stuck tab cannot leak server memory.
  */
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { LiveEvent, LiveHub } from '../live';
 
 const HEARTBEAT_MS = 15_000;
@@ -21,12 +21,16 @@ const MAX_CLIENTS = 100;
 /** Stops one visitor from using up every live connection. */
 const MAX_CLIENTS_PER_IP = 6;
 
-export function registerStream(app: FastifyInstance, live: LiveHub): void {
+export function registerStream(
+  app: FastifyInstance,
+  live: LiveHub,
+  clientId: (request: FastifyRequest) => string,
+): void {
   let clients = 0;
   const perIp = new Map<string, number>();
 
   app.get('/api/stream', (request, reply) => {
-    const ip = request.ip;
+    const ip = clientId(request);
     const fromIp = perIp.get(ip) ?? 0;
     if (clients >= MAX_CLIENTS || fromIp >= MAX_CLIENTS_PER_IP) {
       void reply
@@ -41,6 +45,7 @@ export function registerStream(app: FastifyInstance, live: LiveHub): void {
     reply.hijack();
     const res = reply.raw;
     const headers: Record<string, string> = {
+      'x-content-type-options': 'nosniff',
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache, no-transform',
       connection: 'keep-alive',

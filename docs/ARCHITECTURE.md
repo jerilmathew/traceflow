@@ -353,7 +353,7 @@ browser      ◀── SSE: event: traces {traces:[…]} ── /api/stream
   checkout trace the concurrent user lookup is correctly _off_ the critical
   path because the parallel inventory lookup took longer.
 - **Performance.** Rows are virtualised (`@tanstack/react-virtual`): a
-  5,000-span trace renders ~40 DOM rows; the minimap draws to a `<canvas>`;
+  5,000-span trace renders only the visible rows; the minimap draws to a `<canvas>`;
   rows are memoised. The E2E suite loads a 5,000-span trace and asserts the
   DOM stays under 150 rows.
 - **Zoom** by dragging on the minimap or "Zoom timeline to span"; ticks use a
@@ -402,9 +402,12 @@ Implemented:
 - The demo services disable host/process resource detection so hostnames,
   user paths and command lines are never attached to spans.
 
+Public demo mode (see [DEPLOYMENT.md](DEPLOYMENT.md)) adds per-visitor and site-wide rate
+limits, a live-connection cap, query timeouts, a read-only database session for the API, a
+strict content security policy and trace retention. The collector is never exposed.
+
 Out of scope for the MVP (documented, not claimed): authentication and
-authorisation, multi-tenant isolation, TLS, rate limiting per tenant, data
-retention/TTL jobs, PII scrubbing rules.
+authorisation, multi-tenant isolation, TLS, per-tenant rate limiting, PII scrubbing rules.
 
 ---
 

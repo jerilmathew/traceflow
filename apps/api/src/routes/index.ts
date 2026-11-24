@@ -1,7 +1,7 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { pingDb, type Sql } from '@traceflow/db';
-import { TIME_WINDOWS, isValidTraceId, type TimeWindow } from '@traceflow/shared';
+import { TIME_WINDOWS, isValidTraceId, type DemoInfo, type TimeWindow } from '@traceflow/shared';
 import { ApiError, notFound } from '../errors';
 import type { LiveHub } from '../live';
 import {
@@ -62,8 +62,17 @@ function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
   return result.data;
 }
 
-export function registerRoutes(app: FastifyInstance, deps: { sql: Sql; live: LiveHub }): void {
-  const { sql, live } = deps;
+export interface RouteDeps {
+  sql: Sql;
+  live: LiveHub;
+  clientId: (request: FastifyRequest) => string;
+  demo: DemoInfo | null;
+}
+
+export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
+  const { sql, live, clientId, demo } = deps;
+
+  app.get('/api/meta', async () => ({ demo }));
 
   app.get('/api/health', async (_req, reply) => {
     const database = await pingDb(sql);
@@ -120,5 +129,5 @@ export function registerRoutes(app: FastifyInstance, deps: { sql: Sql; live: Liv
     return getDependencyGraph(sql, windowRange(window));
   });
 
-  registerStream(app, live);
+  registerStream(app, live, clientId);
 }

@@ -30,13 +30,16 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "playwright test",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
-    "screenshots": "tsx scripts/screenshots.ts"
+    "screenshots": "tsx scripts/screenshots.ts",
+    "build:public-demo": "pnpm build && tsx scripts/build-public-demo.ts",
+    "verify:deployment": "tsx scripts/verify-deployment.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.65.1",
     "@types/node": "^22.20.5",
     "concurrently": "^10.0.7",
+    "esbuild": "^0.28.2",
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",

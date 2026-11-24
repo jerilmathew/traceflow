@@ -7,6 +7,7 @@ const { sql, close } = createDb({
   url: config.DATABASE_URL,
   applicationName: 'traceflow-api',
   statementTimeoutMs: config.API_STATEMENT_TIMEOUT_MS,
+  readOnly: true,
 });
 const app = await buildApi({
   sql,
@@ -17,6 +18,11 @@ const app = await buildApi({
   serveWeb: config.SERVE_WEB,
   rateLimitPerMinute: config.RATE_LIMIT_PER_MINUTE,
   trustProxy: config.TRUST_PROXY,
+  globalRateLimitPerMinute: config.GLOBAL_RATE_LIMIT_PER_MINUTE,
+  clientIpHeader: config.CLIENT_IP_HEADER,
+  demo: config.PUBLIC_DEMO
+    ? { retentionHours: config.RETENTION_HOURS, sourceUrl: config.SOURCE_URL || null }
+    : null,
 });
 
 const shutdown = async (signal: string) => {

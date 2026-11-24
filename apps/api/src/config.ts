@@ -20,6 +20,17 @@ const schema = z.object({
    * address to dodge the rate limit. Empty trusts nothing.
    */
   TRUST_PROXY: z.string().default(''),
+  /** Requests per minute across all clients (0 disables): a ceiling that holds even if client IPs are spoofed. */
+  GLOBAL_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(0).default(0),
+  /** Header in which the hosting edge puts the client address, e.g. x-real-ip. See client-ip.ts. */
+  CLIENT_IP_HEADER: z.string().default(''),
+  /** Show the public-demo notice in the dashboard. */
+  PUBLIC_DEMO: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  RETENTION_HOURS: z.coerce.number().min(0).default(0),
+  SOURCE_URL: z.union([z.literal(''), z.url({ protocol: /^https$/ })]).default(''),
   /** Abort API queries that run longer than this. */
   API_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(0).default(10_000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

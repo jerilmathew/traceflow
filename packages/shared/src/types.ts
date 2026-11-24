@@ -200,3 +200,9 @@ export interface ApiErrorBody {
 export interface LiveTracesEvent {
   traces: TraceSummary[];
 }
+
+/** Present when the instance is a public demo; null otherwise. */
+export interface DemoInfo {
+  retentionHours: number;
+  sourceUrl: string | null;
+}

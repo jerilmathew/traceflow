@@ -12,3 +12,4 @@ blob-report/
 .vite/
 *.tsbuildinfo
 .claude/
+out/

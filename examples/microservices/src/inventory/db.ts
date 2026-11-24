@@ -10,6 +10,10 @@ const { Pool } = require('pg') as typeof Pg;
 
 export const pool: PgPool = new Pool({ connectionString: INVENTORY_DATABASE_URL, max: 10 });
 
+// Without a listener, an idle connection dropped by PostgreSQL (restart, failover)
+// is an unhandled 'error' event and kills the process. The pool reconnects by itself.
+pool.on('error', (error) => console.warn(`idle database connection lost: ${error.message}`));
+
 export interface Item {
   sku: string;
   name: string;

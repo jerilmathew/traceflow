@@ -67,6 +67,8 @@ export default defineConfig({
         DATABASE_URL: E2E_DB,
         API_PORT: String(PORTS.api),
         SERVE_WEB: 'false',
+        PUBLIC_DEMO: 'true',
+        RETENTION_HOURS: '24',
         LOG_LEVEL: 'warn',
       },
       reuseExistingServer: reuse,

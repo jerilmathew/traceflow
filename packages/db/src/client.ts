@@ -25,6 +25,8 @@ export interface CreateDbOptions {
   applicationName?: string;
   /** Abort any query running longer than this (0 = no limit). */
   statementTimeoutMs?: number;
+  /** Make every transaction read-only, so this client cannot modify data. */
+  readOnly?: boolean;
 }
 
 export function createDb(options: CreateDbOptions = {}): DbHandle {
@@ -38,6 +40,7 @@ export function createDb(options: CreateDbOptions = {}): DbHandle {
     connection: {
       application_name: options.applicationName ?? 'traceflow',
       ...(options.statementTimeoutMs ? { statement_timeout: options.statementTimeoutMs } : {}),
+      ...(options.readOnly ? { default_transaction_read_only: true } : {}),
     },
     onnotice: () => {},
   });
