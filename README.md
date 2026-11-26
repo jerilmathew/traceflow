@@ -1,6 +1,6 @@
 # TraceFlow
 
-[![CI](https://github.com/jerilmathew3-web/traceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/jerilmathew3-web/traceflow/actions/workflows/ci.yml)
+[![CI](https://github.com/jerilmathew/traceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/jerilmathew/traceflow/actions/workflows/ci.yml)
 
 **A lightweight distributed tracing backend and dashboard for OpenTelemetry.**
 

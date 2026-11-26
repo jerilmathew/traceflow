@@ -70,7 +70,7 @@ Sources: [Railway plans](https://docs.railway.com/reference/pricing/plans),
    ```
    DATABASE_URL=${{Postgres.DATABASE_URL}}
    CLIENT_IP_HEADER=x-real-ip
-   SOURCE_URL=https://github.com/jerilmathew3-web/traceflow
+   SOURCE_URL=https://github.com/jerilmathew/traceflow
    ```
 
 5. Set the health check path to `/api/health` and keep one replica.
