@@ -4,6 +4,8 @@
 
 **A lightweight distributed tracing backend and dashboard for OpenTelemetry.**
 
+**Live demo:** https://traceflow-production-f8c254a0.up.railway.app (generated traffic, no sign-up)
+
 TraceFlow receives real OpenTelemetry traces over OTLP/HTTP, stores them in
 PostgreSQL, reconstructs each request's path across services, and shows where
 the time went — in a live dashboard with a trace waterfall, critical-path
