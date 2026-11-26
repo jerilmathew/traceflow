@@ -27,6 +27,11 @@ paths:
             description: Database unreachable,
             content: { application/json: { schema: { $ref: '#/components/schemas/Health' } } },
           }
+  /api/meta:
+    get:
+      summary: Instance information (public-demo notice)
+      responses:
+        '200': { description: 'demo is null unless this is a public demo instance' }
   /api/overview:
     get:
       summary: Dashboard KPIs for a time window

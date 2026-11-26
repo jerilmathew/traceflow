@@ -82,7 +82,7 @@ export function TraceDetailPage() {
   const depth = useMemo(() => (d ? buildTraceTree(d.spans).maxDepth + 1 : 0), [d]);
 
   return (
-    <div className="flex min-h-[640px] flex-1 flex-col">
+    <div className="flex min-h-[900px] flex-1 flex-col md:min-h-[640px]">
       <header className="border-b border-line px-5 py-3">
         <Link
           to="/traces"

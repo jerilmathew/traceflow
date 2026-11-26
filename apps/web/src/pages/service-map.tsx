@@ -25,7 +25,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import { AlertTriangle, Database, MessageSquare, Server } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState, ErrorState, PageHeader, WindowSelect } from '@/components/common';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,7 @@ import { api, queryKeys } from '@/lib/api';
 import { serviceColor } from '@/lib/colors';
 import { cn } from '@/lib/utils';
 
-type ServiceNodeData = { node: DependencyNode };
+type ServiceNodeData = { node: DependencyNode; vertical: boolean };
 type CallEdgeData = { edge: DependencyEdge };
 type ServiceFlowNode = Node<ServiceNodeData, 'service'>;
 type CallFlowEdge = Edge<CallEdgeData, 'call'>;
@@ -45,7 +45,10 @@ type CallFlowEdge = Edge<CallEdgeData, 'call'>;
  * reachable through a cycle fall back to layer 0. Deterministic, so the map
  * doesn't jump around between refreshes.
  */
-export function layoutGraph(graph: DependencyGraph): {
+export function layoutGraph(
+  graph: DependencyGraph,
+  vertical = false,
+): {
   nodes: ServiceFlowNode[];
   edges: CallFlowEdge[];
 } {
@@ -84,8 +87,11 @@ export function layoutGraph(graph: DependencyGraph): {
       nodes.push({
         id: n.id,
         type: 'service',
-        position: { x: l * 440, y: (i - (members.length - 1) / 2) * 170 },
-        data: { node: n },
+        // Left to right on wide screens, top to bottom on phones.
+        position: vertical
+          ? { x: (i - (members.length - 1) / 2) * 260, y: l * 230 }
+          : { x: l * 440, y: (i - (members.length - 1) / 2) * 170 },
+        data: { node: n, vertical },
       });
     });
   }
@@ -123,7 +129,7 @@ function ServiceNode({ data }: NodeProps<ServiceFlowNode>) {
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={data.vertical ? Position.Top : Position.Left}
         className="!size-2 !border-0 !bg-line-strong"
       />
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
@@ -164,7 +170,7 @@ function ServiceNode({ data }: NodeProps<ServiceFlowNode>) {
       </dl>
       <Handle
         type="source"
-        position={Position.Right}
+        position={data.vertical ? Position.Bottom : Position.Right}
         className="!size-2 !border-0 !bg-line-strong"
       />
     </div>
@@ -238,7 +244,11 @@ export default function ServiceMapPage() {
     queryKey: queryKeys.dependencies(window),
     queryFn: ({ signal }) => api.dependencies(window, signal),
   });
-  const flow = useMemo(() => (graph.data ? layoutGraph(graph.data) : null), [graph.data]);
+  const [vertical] = useState(() => globalThis.matchMedia('(max-width: 640px)').matches);
+  const flow = useMemo(
+    () => (graph.data ? layoutGraph(graph.data, vertical) : null),
+    [graph.data, vertical],
+  );
 
   return (
     <div className="flex min-h-[560px] flex-1 flex-col">
@@ -266,7 +276,7 @@ export default function ServiceMapPage() {
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
-              fitViewOptions={{ padding: 0.25, maxZoom: 1.1 }}
+              fitViewOptions={{ padding: vertical ? 0.08 : 0.25, maxZoom: 1.1 }}
               minZoom={0.2}
               nodesConnectable={false}
               proOptions={{ hideAttribution: true }}
@@ -278,7 +288,7 @@ export default function ServiceMapPage() {
               <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#26262f" />
               <Controls showInteractive={false} position="bottom-right" />
             </ReactFlow>
-            <div className="pointer-events-none absolute top-3 left-4 rounded-md border border-line bg-panel/90 px-3 py-2 text-[11px] text-ink-3 backdrop-blur">
+            <div className="pointer-events-none absolute top-3 left-4 hidden rounded-md sm:block border border-line bg-panel/90 px-3 py-2 text-[11px] text-ink-3 backdrop-blur">
               <div className="flex items-center gap-2">
                 <span className="h-0.5 w-5 bg-[#4a4a5a]" /> healthy calls
               </div>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Activity, GitFork, LayoutDashboard, ListTree, Pause, Play, Server } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { DemoNotice } from '@/components/demo-notice';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useLive, type LiveStatus } from '@/hooks/use-live';
 import { cn } from '@/lib/utils';
@@ -120,6 +121,7 @@ export function AppLayout() {
         </div>
       </aside>
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+        <DemoNotice />
         <Outlet />
       </main>
     </div>

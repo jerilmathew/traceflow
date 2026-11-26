@@ -17,18 +17,24 @@ interface User {
 
 const USERS = new Map<string, User>(
   [
-    { id: 'user-1001', name: 'Ada Lovelace', tier: 'plus', status: 'active', region: 'eu-west' },
+    { id: 'user-1001', name: 'Demo Customer 1', tier: 'plus', status: 'active', region: 'eu-west' },
     {
       id: 'user-1002',
-      name: 'Grace Hopper',
+      name: 'Demo Customer 2',
       tier: 'standard',
       status: 'active',
       region: 'us-east',
     },
-    { id: 'user-1003', name: 'Alan Turing', tier: 'standard', status: 'active', region: 'eu-west' },
+    {
+      id: 'user-1003',
+      name: 'Demo Customer 3',
+      tier: 'standard',
+      status: 'active',
+      region: 'eu-west',
+    },
     {
       id: 'user-2001',
-      name: 'Edsger Dijkstra',
+      name: 'Demo Customer 4',
       tier: 'plus',
       status: 'suspended',
       region: 'eu-central',

@@ -1,5 +1,6 @@
 import type {
   ApiErrorBody,
+  DemoInfo,
   DependencyGraph,
   Overview,
   Paginated,
@@ -64,6 +65,7 @@ function qs(params: object): string {
 }
 
 export const api = {
+  meta: (signal?: AbortSignal) => request<{ demo: DemoInfo | null }>('/api/meta', signal),
   overview: (window: TimeWindow, signal?: AbortSignal) =>
     request<Overview>(`/api/overview${qs({ window })}`, signal),
   traces: (query: TraceQuery, signal?: AbortSignal) =>
@@ -82,6 +84,7 @@ export const api = {
 };
 
 export const queryKeys = {
+  meta: ['meta'] as const,
   overview: (window: TimeWindow) => ['overview', window] as const,
   traces: (query: TraceQuery) => ['traces', query] as const,
   trace: (id: string) => ['trace', id] as const,

@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url';
 import type { Context } from '@opentelemetry/api';
 import type { ReadableSpan, Span, SpanProcessor } from '@opentelemetry/sdk-trace';
 
-/** Repository root (packages/telemetry/src → ../../..). */
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+/** Repository root: TRACEFLOW_ROOT in bundled builds, else packages/telemetry/src → ../../.. */
+const REPO_ROOT =
+  process.env.TRACEFLOW_ROOT ??
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const HOME = homedir();
 
 /** Replace machine-specific absolute paths (repo checkout, home directory) in stack traces. */

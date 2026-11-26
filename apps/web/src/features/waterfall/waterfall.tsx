@@ -193,79 +193,87 @@ export function Waterfall({ spans, totalMs, selectedId, onSelect }: WaterfallPro
           onChange={setView}
         />
 
-        {/* Header: column label + time ruler */}
+        {/* On phones the name + timeline columns scroll sideways together. */}
         <div
-          className="grid h-7 shrink-0 border-b border-line text-[10px] text-ink-3"
-          style={{ gridTemplateColumns: `${NAME_COL} 1fr` }}
+          className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
+          data-testid="waterfall-scroll"
         >
-          <div className="flex items-center border-r border-line px-4 font-medium uppercase tracking-wide">
-            Service · operation
-          </div>
-          <div className="relative mr-16 ml-2">
-            {tickValues.map((t) => {
-              const left = ((t - view.start) / (view.end - view.start)) * 100;
-              return (
-                <span
-                  key={t}
-                  className="num absolute top-1/2 -translate-y-1/2 whitespace-nowrap"
-                  style={{
-                    left: `${left}%`,
-                    transform: `translate(${left > 95 ? '-100%' : left < 3 ? '0' : '-50%'}, -50%)`,
-                  }}
-                >
-                  {formatDuration(t)}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Rows */}
-        <div
-          ref={scrollRef}
-          role="tree"
-          aria-label="Trace spans"
-          tabIndex={0}
-          onKeyDown={onKeyDown}
-          className="relative min-h-0 flex-1 overflow-auto focus-visible:outline-offset-[-2px]"
-        >
-          <div style={{ height: virtualizer.getTotalSize() }} className="relative">
-            {/* Tick grid lines, drawn once behind all rows */}
+          <div className="flex min-h-0 min-w-[680px] flex-1 flex-col md:min-w-0">
+            {/* Header: column label + time ruler */}
             <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 grid"
+              className="grid h-7 shrink-0 border-b border-line text-[10px] text-ink-3"
               style={{ gridTemplateColumns: `${NAME_COL} 1fr` }}
             >
-              <div className="border-r border-line" />
+              <div className="flex items-center border-r border-line px-4 font-medium uppercase tracking-wide">
+                Service · operation
+              </div>
               <div className="relative mr-16 ml-2">
-                {tickValues.map((t) => (
-                  <span
-                    key={t}
-                    className="absolute inset-y-0 w-px bg-line/60"
-                    style={{ left: `${((t - view.start) / (view.end - view.start)) * 100}%` }}
-                  />
-                ))}
+                {tickValues.map((t) => {
+                  const left = ((t - view.start) / (view.end - view.start)) * 100;
+                  return (
+                    <span
+                      key={t}
+                      className="num absolute top-1/2 -translate-y-1/2 whitespace-nowrap"
+                      style={{
+                        left: `${left}%`,
+                        transform: `translate(${left > 95 ? '-100%' : left < 3 ? '0' : '-50%'}, -50%)`,
+                      }}
+                    >
+                      {formatDuration(t)}
+                    </span>
+                  );
+                })}
               </div>
             </div>
-            {virtualizer.getVirtualItems().map((item) => {
-              const row = rows[item.index]!;
-              const id = row.node.span.spanId;
-              return (
-                <SpanRow
-                  key={id}
-                  node={row.node}
-                  top={item.start}
-                  hasChildren={row.hasChildren}
-                  collapsed={row.collapsed}
-                  selected={id === selectedId}
-                  view={view}
-                  critical={(timing.critical.get(id) ?? 0) > 0}
-                  dim={criticalOnly && !((timing.critical.get(id) ?? 0) > 0)}
-                  onToggle={toggle}
-                  onSelect={onSelect}
-                />
-              );
-            })}
+
+            {/* Rows */}
+            <div
+              ref={scrollRef}
+              role="tree"
+              aria-label="Trace spans"
+              tabIndex={0}
+              onKeyDown={onKeyDown}
+              className="relative min-h-0 flex-1 overflow-auto focus-visible:outline-offset-[-2px]"
+            >
+              <div style={{ height: virtualizer.getTotalSize() }} className="relative">
+                {/* Tick grid lines, drawn once behind all rows */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 grid"
+                  style={{ gridTemplateColumns: `${NAME_COL} 1fr` }}
+                >
+                  <div className="border-r border-line" />
+                  <div className="relative mr-16 ml-2">
+                    {tickValues.map((t) => (
+                      <span
+                        key={t}
+                        className="absolute inset-y-0 w-px bg-line/60"
+                        style={{ left: `${((t - view.start) / (view.end - view.start)) * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {virtualizer.getVirtualItems().map((item) => {
+                  const row = rows[item.index]!;
+                  const id = row.node.span.spanId;
+                  return (
+                    <SpanRow
+                      key={id}
+                      node={row.node}
+                      top={item.start}
+                      hasChildren={row.hasChildren}
+                      collapsed={row.collapsed}
+                      selected={id === selectedId}
+                      view={view}
+                      critical={(timing.critical.get(id) ?? 0) > 0}
+                      dim={criticalOnly && !((timing.critical.get(id) ?? 0) > 0)}
+                      onToggle={toggle}
+                      onSelect={onSelect}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>

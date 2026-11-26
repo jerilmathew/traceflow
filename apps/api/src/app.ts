@@ -2,10 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { parse as parseYaml } from 'yaml';
 import type { Sql } from '@traceflow/db';
+import type { DemoInfo } from '@traceflow/shared';
+import { clientIdentifier } from './client-ip';
 import { ApiError } from './errors';
 import { LiveHub } from './live';
 import { registerRoutes } from './routes';
@@ -21,6 +24,16 @@ export interface ApiOptions {
   serveWeb?: boolean;
   /** Start LISTEN for live updates (disable in tests that don't need it). */
   live?: boolean;
+  /** Requests per minute per client IP; 0 or undefined disables limiting. */
+  rateLimitPerMinute?: number;
+  /** Proxy IPs/CIDRs whose X-Forwarded-For is honoured; empty trusts none. */
+  trustProxy?: string;
+  /** Requests per minute across all clients; 0 or undefined disables. */
+  globalRateLimitPerMinute?: number;
+  /** Header carrying the client address set by the hosting edge. */
+  clientIpHeader?: string;
+  /** Set when this instance is a public demo. */
+  demo?: DemoInfo | null;
 }
 
 export async function buildApi(options: ApiOptions): Promise<FastifyInstance & { live: LiveHub }> {
@@ -31,7 +44,49 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance & {
     },
     // Trace ids, service names etc. arrive in the URL; keep it bounded.
     routerOptions: { maxParamLength: 300 },
+    trustProxy: options.trustProxy || false,
+    // The API accepts no meaningful request bodies; give up on slow senders.
+    bodyLimit: 1024,
+    requestTimeout: 15_000,
   });
+  app.server.maxConnections = 1_000;
+  const clientId = clientIdentifier(options.clientIpHeader);
+
+  // Telemetry is untrusted input, so keep a strict policy behind React's escaping.
+  // Inline styles are allowed because bars are positioned with style attributes.
+  app.addHook('onRequest', async (_request, reply) => {
+    void reply.headers({
+      'content-security-policy':
+        "default-src 'self'; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+      'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+      'cross-origin-opener-policy': 'same-origin',
+      // Ignored by browsers over plain HTTP, so harmless for local use.
+      ...(options.demo ? { 'strict-transport-security': 'max-age=31536000' } : {}),
+    });
+  });
+
+  if (options.globalRateLimitPerMinute) {
+    const limit = options.globalRateLimitPerMinute;
+    let windowStart = 0;
+    let used = 0;
+    app.addHook('onRequest', async (_request, reply) => {
+      const now = Date.now();
+      if (now - windowStart >= 60_000) {
+        windowStart = now;
+        used = 0;
+      }
+      if (++used > limit) {
+        void reply.header('retry-after', Math.ceil((windowStart + 60_000 - now) / 1000));
+        throw new ApiError(
+          503,
+          'busy',
+          'the demo is receiving too many requests, try again shortly',
+        );
+      }
+    });
+  }
 
   await app.register(cors, {
     origin: options.corsOrigins ?? false,
@@ -58,9 +113,18 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance & {
             : { error: { code: 'internal_error', message: 'internal server error' } },
         );
       }
-      return reply.status(status).send({ error: { code: 'bad_request', message: error.message } });
+      const code = status === 429 ? 'rate_limited' : 'bad_request';
+      return reply.status(status).send({ error: { code, message: error.message } });
     },
   );
+
+  if (options.rateLimitPerMinute) {
+    await app.register(rateLimit, {
+      max: options.rateLimitPerMinute,
+      timeWindow: '1 minute',
+      keyGenerator: clientId,
+    });
+  }
 
   const live = new LiveHub(options.sql, app.log);
   if (options.live !== false) {
@@ -73,7 +137,7 @@ export async function buildApi(options: ApiOptions): Promise<FastifyInstance & {
     app.addHook('onClose', async () => live.stop());
   }
 
-  registerRoutes(app, { sql: options.sql, live });
+  registerRoutes(app, { sql: options.sql, live, clientId, demo: options.demo ?? null });
 
   app.get(
     '/api/openapi.json',

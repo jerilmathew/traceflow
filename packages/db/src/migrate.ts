@@ -10,10 +10,13 @@ export const MIGRATIONS_FOLDER = path.resolve(
 );
 
 /** Apply all pending SQL migrations in packages/db/drizzle. Idempotent. */
-export async function runMigrations(url: string): Promise<void> {
+export async function runMigrations(
+  url: string,
+  migrationsFolder: string = MIGRATIONS_FOLDER,
+): Promise<void> {
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
-    await migrate(drizzle(sql), { migrationsFolder: MIGRATIONS_FOLDER });
+    await migrate(drizzle(sql), { migrationsFolder });
   } finally {
     await sql.end({ timeout: 5 });
   }
